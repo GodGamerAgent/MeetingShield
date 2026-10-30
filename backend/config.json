@@ -1,0 +1,14 @@
+{
+  "lm_studio_base_url": "http://localhost:1234/v1",
+  "lm_studio_model": "google/gemma-4-26b-a4b-qat",
+  "temperature": 0.2,
+  "max_tokens": 2048,
+  "vad_aggressiveness": 2,
+  "noise_cleaning_enabled": true,
+  "epoch_window_minutes": 10,
+  "default_calendar": "apple",
+  "user_name": "Robin",
+  "audio_export_dir": "/Users/yuvrajpatel/MeetingShield/recordings",
+  "whisper_model": "large-v3-turbo",
+  "whisper_language": "auto"
+}

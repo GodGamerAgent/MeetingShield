@@ -1,0 +1,100 @@
+/* AURA-MEET on-page indicator: one small chip, bottom-left, never in the way of meeting controls */
+
+#aura-meet-indicator {
+  position: fixed;
+  left: 16px;
+  bottom: 96px;
+  z-index: 2147483646;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  pointer-events: none;
+}
+
+#aura-meet-indicator.hidden { display: none; }
+
+#aura-meet-indicator .aura-chip {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 253, 251, 0.97);
+  border: 1px solid #FFD8C7;
+  box-shadow: 0 6px 24px rgba(43, 33, 41, 0.18);
+  color: #2B2129;
+  font-size: 12px;
+  font-weight: 600;
+  animation: aura-in 0.25s ease-out;
+}
+
+#aura-meet-indicator .aura-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #FF7F50;
+  flex-shrink: 0;
+}
+
+#aura-meet-indicator.recording .aura-dot {
+  background: #E11D48;
+  animation: aura-pulse 1.4s ease-in-out infinite;
+}
+
+#aura-meet-indicator.done .aura-dot { background: #10B981; }
+
+#aura-meet-indicator .aura-label { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+#aura-meet-indicator .aura-action {
+  border: none;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, #FF9E7D, #FF7F50);
+}
+
+#aura-meet-indicator.recording .aura-action { background: #2B2129; }
+#aura-meet-indicator .aura-action:disabled { opacity: 0.6; cursor: default; }
+
+#aura-meet-indicator .aura-close {
+  border: none;
+  background: transparent;
+  color: #6E5D68;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+#aura-meet-indicator.recording .aura-close { display: none; }
+
+#aura-meet-indicator .aura-hint {
+  display: none;
+  pointer-events: auto;
+  max-width: 280px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #2B2129;
+  color: #fff;
+  font-size: 11.5px;
+  line-height: 1.45;
+  box-shadow: 0 6px 24px rgba(43, 33, 41, 0.25);
+}
+
+#aura-meet-indicator .aura-hint.show { display: block; }
+
+@keyframes aura-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+@keyframes aura-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AURA-MEET Copilot</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div class="panel">
+    <header class="header">
+      <div class="brand">
+        <div class="brand-orb"></div>
+        <div>
+          <h1 class="brand-title">AURA-MEET</h1>
+          <p class="brand-subtitle">On-device meeting copilot</p>
+        </div>
+      </div>
+      <div class="status" id="backend-status" title="Backend / LM Studio status">
+        <span class="status-dot"></span>
+        <span class="status-text">Connecting…</span>
+      </div>
+    </header>
+
+    <div class="alert" id="alert" hidden>
+      <span id="alert-text"></span>
+      <button class="alert-close" id="alert-close" title="Dismiss">&times;</button>
+    </div>
+
+    <!-- Current meeting -->
+    <section class="card now-card" id="now-card">
+      <!-- idle -->
+      <div class="now-state" data-state="idle">
+        <div class="now-icon">🎧</div>
+        <h2 class="now-title">Waiting for a meeting</h2>
+        <p class="muted">Join a Google Meet, Zoom (web) or Teams call. AURA detects it and records it as its own session.</p>
+        <button class="btn btn-ghost" id="record-tab-btn">Record this tab anyway</button>
+      </div>
+
+      <!-- detected -->
+      <div class="now-state" data-state="detected">
+        <span class="eyebrow"><span class="dot dot-coral"></span><span id="detected-platform">Meeting</span> detected</span>
+        <h2 class="now-title" id="detected-title">Meeting</h2>
+        <button class="btn btn-primary btn-block" id="start-btn">● Start recording</button>
+        <p class="muted small">Shortcut: <kbd>⌥</kbd><kbd>⇧</kbd><kbd>R</kbd> · stops automatically when you leave the call.</p>
+      </div>
+
+      <!-- recording -->
+      <div class="now-state" data-state="recording">
+        <div class="rec-row">
+          <span class="eyebrow eyebrow-rec"><span class="dot dot-rec"></span>Recording</span>
+          <span class="rec-timer" id="rec-timer">00:00</span>
+        </div>
+        <input class="title-input" id="rec-title" type="text" spellcheck="false" title="Rename this session">
+        <div class="meters">
+          <div class="meter">
+            <span class="meter-label">You (mic)</span>
+            <div class="meter-track"><div class="meter-fill" id="mic-meter"></div></div>
+          </div>
+          <div class="meter">
+            <span class="meter-label">Meeting</span>
+            <div class="meter-track"><div class="meter-fill meter-fill-tab" id="tab-meter"></div></div>
+          </div>
+        </div>
+        <button class="btn btn-dark btn-block" id="stop-btn">■ Stop & process</button>
+      </div>
+
+      <label class="toggle">
+        <input type="checkbox" id="auto-record">
+        <span>Record automatically when I join a call</span>
+      </label>
+    </section>
+
+    <!-- Notes for the current / latest session -->
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">✍️ Notes</h2>
+        <span class="muted small" id="notes-status"></span>
+      </div>
+      <textarea id="notes" rows="4" placeholder="Jot quick bullets during the call. After the meeting they're merged with the transcript into polished notes."></textarea>
+      <p class="muted small" id="notes-target"></p>
+    </section>
+
+    <!-- Sessions -->
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Sessions</h2>
+        <a class="link small" href="http://localhost:3000/meetings" target="_blank">All →</a>
+      </div>
+      <ul class="sessions" id="sessions">
+        <li class="muted small empty">No sessions yet.</li>
+      </ul>
+    </section>
+
+    <!-- Ask -->
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Ask about a meeting</h2>
+      </div>
+      <select id="chat-session"></select>
+      <div class="chat" id="chat"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input" placeholder="What did we decide about…?">
+        <button class="btn btn-primary btn-icon" id="chat-send" title="Ask">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <a href="http://localhost:3000" target="_blank" class="link">Open dashboard →</a>
+    </footer>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
