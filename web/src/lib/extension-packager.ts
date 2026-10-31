@@ -61,24 +61,52 @@ export function resolveExtensionDir(): string {
   return candidates[0];
 }
 
+export function extensionVersion(): string {
+  try {
+    const manifest = JSON.parse(fs.readFileSync(path.join(resolveExtensionDir(), "manifest.json"), "utf-8"));
+    return manifest.version || "dev";
+  } catch {
+    return "dev";
+  }
+}
+
+export function extensionZipName(): string {
+  return `quorum-extension-v${extensionVersion()}.zip`;
+}
+
+// DOS date/time for "now", so unzipped files show when this copy was built
+function dosDateTime(d = new Date()): { date: number; time: number } {
+  return {
+    date: ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate(),
+    time: (d.getHours() << 11) | (d.getMinutes() << 5) | Math.floor(d.getSeconds() / 2),
+  };
+}
+
+// Built from the extension/ folder on every request, so the download always matches the current code.
 export function buildExtensionZipBuffer(): Buffer {
   const extDir = resolveExtensionDir();
-  const files = collectExtensionFiles(extDir, "aura-meet-extension");
+  const files = collectExtensionFiles(extDir, "quorum-extension");
+  const { date: modDate, time: modTime } = dosDateTime();
 
-  const installGuide = `AURA-MEET Chrome Extension — Quick Installation Guide
-=======================================================
+  const installGuide = `Quorum Chrome Extension v${extensionVersion()} — Installation
+==============================================
 
-1. Unzip this archive ("aura-meet-chrome-extension.zip") to a folder on your computer.
-2. Open Google Chrome (or Brave / Edge) and navigate to:
-   chrome://extensions
-3. Enable "Developer mode" using the toggle switch in the top-right corner.
-4. Click the "Load unpacked" button in the top-left corner.
-5. Select the unzipped "aura-meet-extension" folder (the folder containing manifest.json).
-6. Join any Google Meet, Zoom Web, or Microsoft Teams call — AURA-MEET will automatically detect the active meeting room and capture stereo 16kHz audio!
+1. Unzip this archive to a folder you will keep (Chrome loads the extension from it).
+2. Open chrome://extensions in Chrome, Brave or Edge.
+3. Turn on "Developer mode" (top-right).
+4. Click "Load unpacked" and select the unzipped "quorum-extension" folder (the one containing manifest.json).
+   Updating? Remove the old Quorum/Quorum extension first, or click the reload icon on its card.
+5. Pin Quorum to the toolbar.
+
+Recording a meeting
+- Open the meeting tab, click the Quorum icon, then "Start recording this tab"
+  (or press Alt+Shift+R / Option+Shift+R, or right-click the icon → "Start / stop recording this tab").
+- Stop it the same way when the meeting ends. Quorum transcribes and summarizes on your machine.
+- The backend must be running: ./start.sh in the project folder (dashboard: http://localhost:3001).
 `;
 
   files.unshift({
-    relPath: "aura-meet-extension/README-INSTALL.txt",
+    relPath: "quorum-extension/README-INSTALL.txt",
     data: Buffer.from(installGuide, "utf-8"),
   });
 
@@ -98,8 +126,8 @@ export function buildExtensionZipBuffer(): Buffer {
     localHeader.writeUInt16LE(20, 4); // version needed to extract (2.0)
     localHeader.writeUInt16LE(0, 6); // general purpose bit flag
     localHeader.writeUInt16LE(0, 8); // compression method: 0 = STORE (uncompressed)
-    localHeader.writeUInt16LE(0, 10); // last mod file time
-    localHeader.writeUInt16LE(0x5421, 12); // last mod file date
+    localHeader.writeUInt16LE(modTime, 10); // last mod file time
+    localHeader.writeUInt16LE(modDate, 12); // last mod file date
     localHeader.writeUInt32LE(checksum, 14); // crc-32
     localHeader.writeUInt32LE(size, 18); // compressed size
     localHeader.writeUInt32LE(size, 22); // uncompressed size
@@ -115,8 +143,8 @@ export function buildExtensionZipBuffer(): Buffer {
     centralHeader.writeUInt16LE(20, 6); // version needed
     centralHeader.writeUInt16LE(0, 8); // flags
     centralHeader.writeUInt16LE(0, 10); // compression method: STORE
-    centralHeader.writeUInt16LE(0, 12); // mod time
-    centralHeader.writeUInt16LE(0x5421, 14); // mod date
+    centralHeader.writeUInt16LE(modTime, 12); // mod time
+    centralHeader.writeUInt16LE(modDate, 14); // mod date
     centralHeader.writeUInt32LE(checksum, 16); // crc-32
     centralHeader.writeUInt32LE(size, 20); // compressed size
     centralHeader.writeUInt32LE(size, 24); // uncompressed size

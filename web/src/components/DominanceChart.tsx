@@ -16,12 +16,12 @@ export default function DominanceChart({ dominanceData }: DominanceChartProps) {
     <div className="flex flex-col h-full justify-between">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <Mic2 className="w-4 h-4 text-aura-coral" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-aura-slate">
+          <Mic2 className="w-4 h-4 text-brand-coral" />
+          <span className="text-xs font-semibold uppercase tracking-wider text-brand-slate">
             Dominance & Airtime
           </span>
         </div>
-        <span className="text-[11px] font-semibold text-aura-slate">
+        <span className="text-[11px] font-semibold text-brand-slate">
           {speakers.length} Speakers
         </span>
       </div>
@@ -29,13 +29,13 @@ export default function DominanceChart({ dominanceData }: DominanceChartProps) {
       {/* Stacked Talk Time Bar */}
       <div className="my-2">
         <div className="flex items-center justify-between text-xs mb-1.5 font-medium">
-          <span className="text-aura-charcoal">Your Share (ME): <strong className="text-aura-coral">{userPct}%</strong></span>
-          <span className="text-aura-slate">Total Spoken: {Math.round(dominanceData?.total_duration_sec || 0)}s</span>
+          <span className="text-brand-charcoal">Your Share (ME): <strong className="text-brand-coral">{userPct}%</strong></span>
+          <span className="text-brand-slate">Total Spoken: {Math.round(dominanceData?.total_duration_sec || 0)}s</span>
         </div>
-        <div className="h-3 w-full bg-aura-mist rounded-full overflow-hidden flex border border-aura-pastel/60">
+        <div className="h-3 w-full bg-brand-mist rounded-full overflow-hidden flex border border-brand-pastel/60">
           {speakers.map((sp, idx) => {
             const colors = [
-              "bg-gradient-to-r from-aura-peach to-aura-coral",
+              "bg-gradient-to-r from-brand-peach to-brand-coral",
               "bg-sky-400",
               "bg-indigo-400",
               "bg-emerald-400",
@@ -60,22 +60,22 @@ export default function DominanceChart({ dominanceData }: DominanceChartProps) {
           <div
             key={sp.speaker_name}
             className={`flex items-center justify-between p-1.5 rounded-lg text-xs transition-colors ${
-              sp.is_user ? "bg-aura-mist/80 font-semibold" : "hover:bg-aura-mist/40"
+              sp.is_user ? "bg-brand-mist/80 font-semibold" : "hover:bg-brand-mist/40"
             }`}
           >
             <div className="flex items-center gap-2 min-w-0">
               <span
                 className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                  sp.is_user ? "bg-aura-coral" : "bg-aura-slate"
+                  sp.is_user ? "bg-brand-coral" : "bg-brand-slate"
                 }`}
               />
-              <span className="truncate text-aura-charcoal">
+              <span className="truncate text-brand-charcoal">
                 {sp.speaker_name} {sp.is_user && "(ME)"}
               </span>
             </div>
-            <div className="flex items-center gap-3 text-aura-slate text-[11px] flex-shrink-0">
+            <div className="flex items-center gap-3 text-brand-slate text-[11px] flex-shrink-0">
               <span>{sp.wpm} WPM</span>
-              <span className="font-semibold text-aura-charcoal">{sp.percentage}%</span>
+              <span className="font-semibold text-brand-charcoal">{sp.percentage}%</span>
             </div>
           </div>
         ))}

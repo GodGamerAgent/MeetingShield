@@ -29,7 +29,7 @@ interface Analysis {
   epochs: any[];
 }
 
-const card = "rounded-3xl bg-white/85 backdrop-blur-md border border-aura-pastel/80 shadow-peach-sm p-5 sm:p-6";
+const card = "rounded-3xl bg-white/85 backdrop-blur-md border border-brand-pastel/80 shadow-peach-sm p-5 sm:p-6";
 
 function tsToSeconds(ts: string) {
   const [h, m, s] = ts.split(":").map(Number);
@@ -89,8 +89,20 @@ export default function MeetingDetailPage() {
   }, [loadAll]);
 
   useLiveEvents((ev) => {
+    if (ev.type === "SESSIONS_CLEARED") {
+      setMeeting(null);
+      return;
+    }
     if (ev.meeting_id !== meetingId) return;
-    if (ev.type === "PROCESSING_PROGRESS") {
+    if (ev.type === "MEETING_DELETED") {
+      setMeeting(null);
+    } else if (ev.type === "MEETING_UPDATED" && ev.meeting) {
+      // Renamed / re-scoped from the extension or another tab
+      setMeeting((m) => (m ? { ...m, ...ev.meeting } : ev.meeting));
+      if (!editingTitle) setTitleDraft(ev.meeting.title);
+    } else if (ev.type === "RECORDING_STARTED") {
+      setMeeting((m) => (m ? { ...m, status: "recording" } : m));
+    } else if (ev.type === "PROCESSING_PROGRESS") {
       setProgress({ progress: ev.progress, message: ev.message });
       setMeeting((m) => (m ? { ...m, status: "processing" } : m));
     } else if (ev.type === "MEETING_PROCESSED" || ev.type === "PROCESSING_ERROR" || ev.type === "RECORDING_STOPPED") {
@@ -148,8 +160,8 @@ export default function MeetingDetailPage() {
     const el = target ? document.getElementById(`seg-${target.id}`) : null;
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
-      el.classList.add("ring-2", "ring-aura-coral");
-      setTimeout(() => el.classList.remove("ring-2", "ring-aura-coral"), 2500);
+      el.classList.add("ring-2", "ring-brand-coral");
+      setTimeout(() => el.classList.remove("ring-2", "ring-brand-coral"), 2500);
     }
     if (audioRef.current) {
       audioRef.current.currentTime = tsToSeconds(ts);
@@ -173,8 +185,8 @@ export default function MeetingDetailPage() {
 
   if (loading) {
     return (
-      <div className="p-16 text-center text-xs text-aura-slate flex flex-col items-center gap-3">
-        <Loader2 className="w-6 h-6 text-aura-coral animate-spin" />
+      <div className="p-16 text-center text-xs text-brand-slate flex flex-col items-center gap-3">
+        <Loader2 className="w-6 h-6 text-brand-coral animate-spin" />
         Loading session…
       </div>
     );
@@ -183,9 +195,9 @@ export default function MeetingDetailPage() {
   if (!meeting) {
     return (
       <div className={`${card} text-center space-y-3`}>
-        <h2 className="text-xl font-bold text-aura-charcoal">Session not found</h2>
-        <p className="text-xs text-aura-slate">It may have been deleted.</p>
-        <Link href="/meetings" className="inline-block px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-aura-peach to-aura-coral">
+        <h2 className="text-xl font-bold text-brand-charcoal">Session not found</h2>
+        <p className="text-xs text-brand-slate">It may have been deleted.</p>
+        <Link href="/meetings" className="inline-block px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-brand-peach to-brand-coral">
           All sessions
         </Link>
       </div>
@@ -210,13 +222,13 @@ export default function MeetingDetailPage() {
         <button
           type="button"
           onClick={() => router.push("/meetings")}
-          className="inline-flex items-center gap-1 text-[11px] font-semibold text-aura-slate hover:text-aura-coral mb-3 cursor-pointer"
+          className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-slate hover:text-brand-coral mb-3 cursor-pointer"
         >
           <ArrowLeft className="w-3 h-3" /> Sessions
         </button>
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2 text-[11px] text-aura-slate font-medium">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-brand-slate font-medium">
               <StatusBadge status={meeting.status} progress={progress || undefined} />
               <span suppressHydrationWarning>{new Date(meeting.created_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</span>
               {meeting.duration_sec > 0 && <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDuration(meeting.duration_sec)}</span>}
@@ -228,15 +240,15 @@ export default function MeetingDetailPage() {
                 onChange={(e) => setTitleDraft(e.target.value)}
                 onBlur={handleSaveTitle}
                 onKeyDown={(e) => e.key === "Enter" && handleSaveTitle()}
-                className="mt-2 w-full text-2xl sm:text-3xl font-extrabold text-aura-charcoal bg-transparent border-b-2 border-aura-coral focus:outline-none"
+                className="mt-2 w-full text-2xl sm:text-3xl font-extrabold text-brand-charcoal bg-transparent border-b-2 border-brand-coral focus:outline-none"
               />
             ) : (
-              <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold text-aura-charcoal tracking-tight flex items-center gap-2 group">
+              <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold text-brand-charcoal tracking-tight flex items-center gap-2 group">
                 <span className="truncate">{meeting.title}</span>
                 <button
                   type="button"
                   onClick={() => setEditingTitle(true)}
-                  className="p-1 rounded-lg opacity-70 hover:opacity-100 text-aura-slate hover:text-aura-coral hover:bg-aura-mist"
+                  className="p-1 rounded-lg opacity-70 hover:opacity-100 text-brand-slate hover:text-brand-coral hover:bg-brand-mist"
                   title="Rename session"
                 >
                   <Edit3 className="w-4 h-4" />
@@ -251,7 +263,7 @@ export default function MeetingDetailPage() {
                 type="button"
                 onClick={handleProcess}
                 disabled={isProcessing}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-aura-peach to-aura-coral btn-3d disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-brand-peach to-brand-coral btn-3d disabled:opacity-50"
                 title="Re-run transcription and AI synthesis"
               >
                 {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCw className="w-3.5 h-3.5" />}
@@ -261,17 +273,17 @@ export default function MeetingDetailPage() {
             <button
               type="button"
               onClick={() => setIsFollowupOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white text-aura-charcoal border border-aura-pastel hover:bg-aura-mist btn-3d-light"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white text-brand-charcoal border border-brand-pastel hover:bg-brand-mist btn-3d-light"
             >
-              <Mail className="w-3.5 h-3.5 text-aura-coral" /> Follow-up
+              <Mail className="w-3.5 h-3.5 text-brand-coral" /> Follow-up
             </button>
             <button
               type="button"
               onClick={() => setIsMarkdownOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white text-aura-charcoal border border-aura-pastel hover:bg-aura-mist btn-3d-light"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white text-brand-charcoal border border-brand-pastel hover:bg-brand-mist btn-3d-light"
               title="Open GitHub & Obsidian Markdown Viewer"
             >
-              <FileText className="w-3.5 h-3.5 text-aura-coral" /> Notes .md
+              <FileText className="w-3.5 h-3.5 text-brand-coral" /> Notes .md
             </button>
             <button
               type="button"
@@ -324,12 +336,12 @@ export default function MeetingDetailPage() {
         <div className={`${card} space-y-4`}>
           <SectionTitle icon={<FileText className="w-4 h-4" />} title="Summary">
             <button onClick={handleResynthesize} disabled={synthesizing || !hasTranscript || isProcessing}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold text-aura-coral bg-aura-mist border border-aura-pastel disabled:opacity-50">
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold text-brand-coral bg-brand-mist border border-brand-pastel disabled:opacity-50">
               <Sparkles className={`w-3.5 h-3.5 ${synthesizing ? "animate-spin" : ""}`} />
               {synthesizing ? "Summarizing…" : "Re-summarize"}
             </button>
           </SectionTitle>
-          <p className="text-[13px] leading-relaxed text-aura-charcoal whitespace-pre-line">
+          <p className="text-[13px] leading-relaxed text-brand-charcoal whitespace-pre-line">
             {analysis?.executive_summary || "No summary yet."}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -339,21 +351,21 @@ export default function MeetingDetailPage() {
           {(analysis?.action_plan || []).length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {analysis!.action_plan.map((p, i) => (
-                <div key={i} className="p-3.5 rounded-2xl bg-aura-mist/50 border border-aura-pastel/60 text-xs">
-                  <div className="font-bold text-aura-charcoal">{p.phase}</div>
-                  <p className="text-aura-slate mt-1 leading-relaxed">{p.details}</p>
+                <div key={i} className="p-3.5 rounded-2xl bg-brand-mist/50 border border-brand-pastel/60 text-xs">
+                  <div className="font-bold text-brand-charcoal">{p.phase}</div>
+                  <p className="text-brand-slate mt-1 leading-relaxed">{p.details}</p>
                 </div>
               ))}
             </div>
           )}
           {(analysis?.epochs || []).length > 0 && (
             <details className="text-xs">
-              <summary className="cursor-pointer font-semibold text-aura-slate flex items-center gap-1.5"><Layers className="w-3.5 h-3.5" /> Section digests ({analysis!.epochs.length})</summary>
+              <summary className="cursor-pointer font-semibold text-brand-slate flex items-center gap-1.5"><Layers className="w-3.5 h-3.5" /> Section digests ({analysis!.epochs.length})</summary>
               <div className="mt-2 space-y-2">
                 {analysis!.epochs.map((e: any) => (
-                  <div key={e.id} className="p-3 rounded-xl bg-aura-mist/40 border border-aura-pastel/50">
-                    <div className="font-bold text-aura-charcoal">Minutes {e.start_min}–{e.end_min}</div>
-                    <p className="whitespace-pre-line text-aura-slate mt-1">{e.summary_markdown}</p>
+                  <div key={e.id} className="p-3 rounded-xl bg-brand-mist/40 border border-brand-pastel/50">
+                    <div className="font-bold text-brand-charcoal">Minutes {e.start_min}–{e.end_min}</div>
+                    <p className="whitespace-pre-line text-brand-slate mt-1">{e.summary_markdown}</p>
                   </div>
                 ))}
               </div>
@@ -367,10 +379,10 @@ export default function MeetingDetailPage() {
         <div className={`${card} space-y-4`}>
           <SectionTitle icon={<CheckSquare className="w-4 h-4" />} title={`Action items (${analysis.todos.length})`}>
             {owners.length > 1 && (
-              <div className="flex items-center gap-1 overflow-x-auto bg-aura-mist p-1 rounded-xl border border-aura-pastel/60">
+              <div className="flex items-center gap-1 overflow-x-auto bg-brand-mist p-1 rounded-xl border border-brand-pastel/60">
                 {["ALL", ...owners].map((o) => (
                   <button key={o} onClick={() => setOwnerFilter(o)}
-                    className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap ${ownerFilter === o ? "bg-white text-aura-coral shadow-xs" : "text-aura-slate"}`}>
+                    className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap ${ownerFilter === o ? "bg-white text-brand-coral shadow-xs" : "text-brand-slate"}`}>
                     {o === "ALL" ? "All" : o}
                   </button>
                 ))}
@@ -378,30 +390,30 @@ export default function MeetingDetailPage() {
             )}
           </SectionTitle>
           {todos.length === 0 ? (
-            <p className="text-xs text-aura-slate text-center py-4">No action items found in this meeting.</p>
+            <p className="text-xs text-brand-slate text-center py-4">No action items found in this meeting.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {todos.map((t) => {
                 const done = t.completed === 1;
                 return (
-                  <div key={t.id} className={`p-4 rounded-2xl border flex flex-col gap-3 ${done ? "bg-slate-50 border-slate-200 opacity-70" : "bg-white border-aura-pastel/80"}`}>
+                  <div key={t.id} className={`p-4 rounded-2xl border flex flex-col gap-3 ${done ? "bg-slate-50 border-slate-200 opacity-70" : "bg-white border-brand-pastel/80"}`}>
                     <div className="flex items-start gap-3">
                       <button onClick={() => handleToggleTodo(t.id)}
-                        className={`w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 mt-0.5 ${done ? "bg-aura-coral border-aura-coral text-white" : "border-aura-pastel bg-white hover:border-aura-peach"}`}>
+                        className={`w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 mt-0.5 ${done ? "bg-brand-coral border-brand-coral text-white" : "border-brand-pastel bg-white hover:border-brand-peach"}`}>
                         {done && <Check className="w-3.5 h-3.5" />}
                       </button>
-                      <p className={`text-xs font-semibold leading-snug flex-1 ${done ? "line-through text-aura-slate" : "text-aura-charcoal"}`}>{t.task}</p>
+                      <p className={`text-xs font-semibold leading-snug flex-1 ${done ? "line-through text-brand-slate" : "text-brand-charcoal"}`}>{t.task}</p>
                       <PriorityBadge priority={t.priority} />
                     </div>
-                    <div className="flex items-center justify-between text-[11px] text-aura-slate">
+                    <div className="flex items-center justify-between text-[11px] text-brand-slate">
                       <span>
-                        <span className="font-semibold text-aura-charcoal">{t.owner}</span>
+                        <span className="font-semibold text-brand-charcoal">{t.owner}</span>
                         {t.deadline && <> · {t.deadline}</>}
                         {" · "}
-                        <button onClick={() => jumpTo(t.timestamp_ref)} className="font-mono hover:text-aura-coral">{t.timestamp_ref}</button>
+                        <button onClick={() => jumpTo(t.timestamp_ref)} className="font-mono hover:text-brand-coral">{t.timestamp_ref}</button>
                       </span>
                       <button onClick={() => setCalTask({ title: t.task, deadline: t.deadline, description: `Owner: ${t.owner}\nMeeting: ${meeting.title}` })}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-aura-coral bg-aura-mist border border-aura-pastel">
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-brand-coral bg-brand-mist border border-brand-pastel">
                         <Calendar className="w-3 h-3" /> Calendar
                       </button>
                     </div>
@@ -417,7 +429,7 @@ export default function MeetingDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         <div className={`lg:col-span-7 ${card} flex flex-col h-[640px]`}>
           <SectionTitle icon={<Clock className="w-4 h-4" />} title={`Transcript (${transcript.length})`}>
-            <span className="text-[10.5px] text-aura-slate">Click a time to play from there</span>
+            <span className="text-[10.5px] text-brand-slate">Click a time to play from there</span>
           </SectionTitle>
           {hasTranscript ? (
             <div className="flex-1 overflow-y-auto mt-3 space-y-2.5 pr-1">
@@ -426,9 +438,9 @@ export default function MeetingDetailPage() {
               ))}
             </div>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-xs text-aura-slate space-y-3">
-              <Clock className="w-8 h-8 text-aura-coral/70" />
-              <p className="font-bold text-aura-charcoal text-sm">No Transcript Generated Yet</p>
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-xs text-brand-slate space-y-3">
+              <Clock className="w-8 h-8 text-brand-coral/70" />
+              <p className="font-bold text-brand-charcoal text-sm">No Transcript Generated Yet</p>
               <p className="max-w-sm leading-relaxed">
                 Click <strong>Process</strong> above (or <strong>Stop &amp; process</strong> if recording) to run Faster-Whisper ASR and generate speaker-attributed transcript segments.
               </p>
@@ -467,14 +479,14 @@ export default function MeetingDetailPage() {
           <SectionTitle icon={<Bookmark className="w-4 h-4" />} title="Things to remember" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {analysis!.things_to_remember.map((m) => (
-              <div key={m.id} className="p-4 rounded-2xl bg-gradient-to-br from-aura-mist/70 to-white border border-aura-pastel/80 text-xs space-y-1.5">
+              <div key={m.id} className="p-4 rounded-2xl bg-gradient-to-br from-brand-mist/70 to-white border border-brand-pastel/80 text-xs space-y-1.5">
                 <div className="flex justify-between text-[10px]">
-                  <span className="font-bold uppercase tracking-wider text-aura-coral">{m.category}</span>
-                  <button onClick={() => jumpTo(m.timestamp_ref)} className="font-mono text-aura-slate hover:text-aura-coral">{m.timestamp_ref}</button>
+                  <span className="font-bold uppercase tracking-wider text-brand-coral">{m.category}</span>
+                  <button onClick={() => jumpTo(m.timestamp_ref)} className="font-mono text-brand-slate hover:text-brand-coral">{m.timestamp_ref}</button>
                 </div>
-                <p className="font-bold text-aura-charcoal leading-snug">{m.fact}</p>
-                {m.context && <p className="text-aura-slate">{m.context}</p>}
-                {m.person && <p className="text-aura-slate">— {m.person}</p>}
+                <p className="font-bold text-brand-charcoal leading-snug">{m.fact}</p>
+                {m.context && <p className="text-brand-slate">{m.context}</p>}
+                {m.person && <p className="text-brand-slate">— {m.person}</p>}
               </div>
             ))}
           </div>
@@ -487,14 +499,14 @@ export default function MeetingDetailPage() {
           <SectionTitle icon={<Lightbulb className="w-4 h-4" />} title="How you came across" />
           <div className="space-y-3">
             {analysis!.behavioral_coaching.map((c) => (
-              <div key={c.id} className="p-4 rounded-2xl border border-aura-pastel/70 bg-white text-xs space-y-2">
+              <div key={c.id} className="p-4 rounded-2xl border border-brand-pastel/70 bg-white text-xs space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <button onClick={() => jumpTo(c.timestamp_ref)} className="font-mono text-[10.5px] text-aura-slate hover:text-aura-coral">{c.timestamp_ref}</button>
+                  <button onClick={() => jumpTo(c.timestamp_ref)} className="font-mono text-[10.5px] text-brand-slate hover:text-brand-coral">{c.timestamp_ref}</button>
                   <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-semibold text-[10.5px]">{c.tone_detected}</span>
-                  <span className="text-[10.5px] text-aura-slate">Clarity {c.clarity_score} · Empathy {c.empathy_score}</span>
+                  <span className="text-[10.5px] text-brand-slate">Clarity {c.clarity_score} · Empathy {c.empathy_score}</span>
                 </div>
-                <p className="italic text-aura-charcoal">&ldquo;{c.what_you_said}&rdquo;</p>
-                <p className="text-aura-slate">{c.impact_analysis}</p>
+                <p className="italic text-brand-charcoal">&ldquo;{c.what_you_said}&rdquo;</p>
+                <p className="text-brand-slate">{c.impact_analysis}</p>
                 <p className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900"><span className="font-bold">Try: </span>{c.better_response}</p>
               </div>
             ))}
@@ -517,10 +529,10 @@ export default function MeetingDetailPage() {
 
 function SectionTitle({ icon, title, children }: { icon: React.ReactNode; title: string; children?: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-aura-border">
+    <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-brand-border">
       <div className="flex items-center gap-2">
-        <div className="p-1.5 rounded-lg bg-aura-mist text-aura-coral border border-aura-pastel">{icon}</div>
-        <h2 className="text-xs font-bold uppercase tracking-wider text-aura-charcoal">{title}</h2>
+        <div className="p-1.5 rounded-lg bg-brand-mist text-brand-coral border border-brand-pastel">{icon}</div>
+        <h2 className="text-xs font-bold uppercase tracking-wider text-brand-charcoal">{title}</h2>
       </div>
       {children}
     </div>
@@ -531,7 +543,7 @@ function withCitations(text: string, onCite: (ts: string) => void) {
   return text.split(/(\[\d{2}:\d{2}:\d{2}\])/g).map((part, i) => {
     const m = part.match(/^\[(\d{2}:\d{2}:\d{2})\]$/);
     return m ? (
-      <button key={i} onClick={() => onCite(m[1])} className="font-mono text-[10px] px-1 rounded bg-white border border-aura-pastel text-aura-coral mx-0.5">{m[1]}</button>
+      <button key={i} onClick={() => onCite(m[1])} className="font-mono text-[10px] px-1 rounded bg-white border border-brand-pastel text-brand-coral mx-0.5">{m[1]}</button>
     ) : (
       <span key={i}>{part}</span>
     );
@@ -544,7 +556,7 @@ function ListBox({ tone, icon, title, items, empty, onCite }: { tone: "emerald" 
     <div className={`p-4 rounded-2xl border space-y-2 ${styles}`}>
       <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider">{icon}{title}</div>
       {items.length === 0 ? (
-        <p className="text-[11px] text-aura-slate">{empty}</p>
+        <p className="text-[11px] text-brand-slate">{empty}</p>
       ) : (
         <ul className="space-y-1.5 text-xs font-medium">
           {items.map((d, i) => <li key={i} className="leading-relaxed">• {withCitations(d, onCite)}</li>)}
@@ -577,33 +589,33 @@ function TranscriptRow({ seg, options, onJump, onRename }: {
   };
 
   return (
-    <div id={`seg-${seg.id}`} className={`p-3 rounded-2xl border text-xs leading-relaxed transition-shadow ${seg.is_user ? "bg-gradient-to-r from-aura-mist/90 to-white border-aura-peach/50" : "bg-white/80 border-aura-border"}`}>
+    <div id={`seg-${seg.id}`} className={`p-3 rounded-2xl border text-xs leading-relaxed transition-shadow ${seg.is_user ? "bg-gradient-to-r from-brand-mist/90 to-white border-brand-peach/50" : "bg-white/80 border-brand-border"}`}>
       <div className="flex items-center justify-between mb-1">
         <div className="relative">
           <button onClick={() => setOpen((o) => !o)} title="Rename speaker"
-            className={`text-[11px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${seg.is_user ? "bg-aura-peach text-white" : "bg-slate-100 text-aura-charcoal border border-slate-200"}`}>
+            className={`text-[11px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${seg.is_user ? "bg-brand-peach text-white" : "bg-slate-100 text-brand-charcoal border border-slate-200"}`}>
             {seg.speaker_label === "UNKNOWN" ? <Users className="w-3 h-3" /> : null}
             {seg.speaker_name}
           </button>
           {open && (
-            <div className="absolute z-20 mt-1 w-56 p-2 rounded-xl bg-white border border-aura-pastel shadow-peach-md space-y-1">
+            <div className="absolute z-20 mt-1 w-56 p-2 rounded-xl bg-white border border-brand-pastel shadow-peach-md space-y-1">
               {options.map((o) => (
-                <button key={o} onClick={() => pick(o)} className="block w-full text-left px-2 py-1 rounded-lg hover:bg-aura-mist text-[11.5px]">{o}</button>
+                <button key={o} onClick={() => pick(o)} className="block w-full text-left px-2 py-1 rounded-lg hover:bg-brand-mist text-[11.5px]">{o}</button>
               ))}
               <input value={custom} onChange={(e) => setCustom(e.target.value)} onKeyDown={(e) => e.key === "Enter" && pick(custom)}
-                placeholder="Other name + Enter" className="w-full px-2 py-1 rounded-lg border border-aura-pastel text-[11.5px] focus:outline-none" />
-              <label className="flex items-center gap-1.5 px-1 pt-1 text-[10.5px] text-aura-slate">
-                <input type="checkbox" checked={applyAll} onChange={(e) => setApplyAll(e.target.checked)} className="accent-aura-coral" />
+                placeholder="Other name + Enter" className="w-full px-2 py-1 rounded-lg border border-brand-pastel text-[11.5px] focus:outline-none" />
+              <label className="flex items-center gap-1.5 px-1 pt-1 text-[10.5px] text-brand-slate">
+                <input type="checkbox" checked={applyAll} onChange={(e) => setApplyAll(e.target.checked)} className="accent-brand-coral" />
                 Rename every &ldquo;{seg.speaker_name}&rdquo; line
               </label>
             </div>
           )}
         </div>
-        <button onClick={() => onJump(seg.timestamp_badge)} className="font-mono text-[10px] font-semibold text-aura-slate hover:text-aura-coral bg-white px-2 py-0.5 rounded border border-aura-pastel/60">
+        <button onClick={() => onJump(seg.timestamp_badge)} className="font-mono text-[10px] font-semibold text-brand-slate hover:text-brand-coral bg-white px-2 py-0.5 rounded border border-brand-pastel/60">
           {seg.timestamp_badge}
         </button>
       </div>
-      <p className="text-aura-charcoal">{seg.text}</p>
+      <p className="text-brand-charcoal">{seg.text}</p>
     </div>
   );
 }

@@ -26,32 +26,32 @@ interface OnboardingTourModalProps {
 const TOUR_STEPS = [
   {
     badge: "Step 1 of 6 · Required Browser Extension",
-    title: "Add the AURA-MEET Chrome Extension to Your Browser",
+    title: "Add the Quorum Chrome Extension to Your Browser",
     icon: Puzzle,
     summary:
-      "To automatically detect and capture live Google Meet, Zoom, and Microsoft Teams calls in stereo, you need to add the AURA-MEET Chrome Extension. You can download it right here in the Welcome Tour, on the Welcome page, or anytime from the left sidebar.",
+      "Quorum records meetings through its Chrome extension. Download it here, on the Home page, or anytime from the left sidebar — the download is always built from the latest code.",
     bullets: [
       "Click 'Download Chrome Extension (.zip)' below (or in the left sidebar) and unzip the archive on your computer.",
       "Open chrome://extensions in Chrome, Brave, or Edge and toggle on 'Developer mode' in the top-right corner.",
-      "Click 'Load unpacked' and select the unzipped aura-meet-extension folder — it immediately connects to AURA-MEET!",
+      "Click 'Load unpacked' and select the unzipped quorum-extension folder — it immediately connects to Quorum!",
     ],
     highlight:
-      "Need to test before installing? You can also click 'Detect / Simulate Live Call' on the Welcome page to test the full pipeline immediately.",
+      "After installing, right-click the Quorum toolbar icon and choose 'Session settings…' to set your name, models and recording behaviour.",
     showExtensionDownload: true,
   },
   {
-    badge: "Step 2 of 6 · Automatic Detection",
-    title: "Automatic Meeting Detection & Stereo Capture",
+    badge: "Step 2 of 6 · Recording",
+    title: "You Start and Stop Every Recording",
     icon: Radio,
     summary:
-      "Once the extension is added, AURA-MEET automatically detects when you join an active Google Meet, Zoom, or Microsoft Teams call—and lets you simulate or launch live call detection right from the Home dashboard.",
+      "Nothing is recorded until you say so. Open the meeting tab, click the Quorum icon and press Start recording — each recording becomes its own session.",
     bullets: [
-      "Detects active meeting rooms (ignoring pre-join lobbies) and extracts participant names automatically.",
-      "Captures dual-channel 16kHz stereo audio: Left channel = Your Microphone (ME), Right channel = Remote Meeting Tab.",
-      "Stops automatically when you leave the call (or when you click 'Stop & Process') and triggers the full intelligence pipeline.",
+      "Works with any tab that plays audio: Google Meet, Zoom web, Teams, or a recorded call.",
+      "Captures 16kHz stereo audio: left channel = your microphone, right channel = the meeting tab.",
+      "Stop from the side panel, the dashboard or ⌥⇧R; transcription and the summary start right after.",
     ],
     highlight:
-      "Try clicking 'Detect / Simulate Live Call' on the Home screen to see auto-detection in action!",
+      "Shortcut: ⌥⇧R starts or stops recording the current tab. Right-click the Quorum icon for session settings.",
     showExtensionDownload: false,
   },
   {
@@ -74,7 +74,7 @@ const TOUR_STEPS = [
     title: "Personal Communication & Negotiation Coach (Runs Every Session)",
     icon: UserCheck,
     summary:
-      "Every time you process a meeting session, AURA audits your spoken lines (ME) and updates your Personal Communication & Negotiation Coach.",
+      "Every time you process a meeting session, Quorum audits your spoken lines (ME) and updates your Personal Communication & Negotiation Coach.",
     bullets: [
       "Tracks longitudinal Clarity Score, Listening/Empathy Ratio, Filler Words per Minute, and Talk Time.",
       "Detects hedging ('probably', 'I think'), defensive pushback, or passive concessions in your statements.",
@@ -89,7 +89,7 @@ const TOUR_STEPS = [
     title: "Individual Conversation & Commitment Dossier (Runs Every Session)",
     icon: Users,
     summary:
-      "Every time you process a meeting session, AURA automatically builds and updates a 1-on-1 Relationship Dossier for every named participant.",
+      "Every time you process a meeting session, Quorum automatically builds and updates a 1-on-1 Relationship Dossier for every named participant.",
     bullets: [
       "Extracts Cross-Meeting Promises & Commitments: what each colleague promised you vs. what you promised them.",
       "Aggregates chronological verbatim spoken quotes with [HH:MM:SS] timestamps across all meetings.",
@@ -138,23 +138,23 @@ export default function OnboardingTourModal({ isOpen, onClose }: OnboardingTourM
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-aura-charcoal/50 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-brand-charcoal/50 backdrop-blur-sm p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="onboarding-tour-title"
     >
-      <div className="w-full max-w-2xl rounded-3xl bg-white border border-aura-pastel shadow-2xl overflow-hidden card-3d">
+      <div className="w-full max-w-2xl rounded-3xl bg-white border border-brand-pastel shadow-2xl overflow-hidden card-3d">
         {/* Top Progress Header */}
-        <div className="bg-gradient-to-r from-aura-mist via-white to-aura-mist px-6 py-4 border-b border-aura-pastel flex items-center justify-between gap-3">
+        <div className="bg-gradient-to-r from-brand-mist via-white to-brand-mist px-6 py-4 border-b border-brand-pastel flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-aura-peach to-aura-coral text-white flex items-center justify-center shadow-peach-sm">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-peach to-brand-coral text-white flex items-center justify-center shadow-peach-sm">
               <Compass className="w-4 h-4" />
             </div>
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-aura-coral block">
-                Welcome to AURA-MEET · Interactive Guide
+              <span className="text-[10px] font-bold uppercase tracking-widest text-brand-coral block">
+                Welcome to Quorum · Interactive Guide
               </span>
-              <span className="text-xs font-extrabold text-aura-charcoal">
+              <span className="text-xs font-extrabold text-brand-charcoal">
                 {current.badge}
               </span>
             </div>
@@ -163,10 +163,10 @@ export default function OnboardingTourModal({ isOpen, onClose }: OnboardingTourM
           <div className="flex items-center gap-2">
             <a
               href={api.getExtensionDownloadUrl()}
-              download="aura-meet-chrome-extension.zip"
+              download
               onClick={handleDownloadClick}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold text-aura-coral bg-white border border-aura-pastel hover:bg-aura-mist btn-3d-light"
-              title="Download the AURA-MEET Chrome Extension (.zip)"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold text-brand-coral bg-white border border-brand-pastel hover:bg-brand-mist btn-3d-light"
+              title="Download the Quorum Chrome Extension (.zip)"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Download Extension</span>
@@ -176,7 +176,7 @@ export default function OnboardingTourModal({ isOpen, onClose }: OnboardingTourM
               type="button"
               onClick={handleFinish}
               aria-label="Close website tour"
-              className="p-1.5 rounded-xl text-aura-slate hover:text-aura-charcoal hover:bg-white border border-transparent hover:border-aura-pastel transition-colors"
+              className="p-1.5 rounded-xl text-brand-slate hover:text-brand-charcoal hover:bg-white border border-transparent hover:border-brand-pastel transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -193,10 +193,10 @@ export default function OnboardingTourModal({ isOpen, onClose }: OnboardingTourM
               aria-label={`Go to tour step ${idx + 1}`}
               className={`h-2 rounded-full transition-all ${
                 idx === stepIndex
-                  ? "w-10 bg-gradient-to-r from-aura-peach to-aura-coral"
+                  ? "w-10 bg-gradient-to-r from-brand-peach to-brand-coral"
                   : idx < stepIndex
-                  ? "w-4 bg-aura-peach/60"
-                  : "w-4 bg-aura-mist border border-aura-pastel"
+                  ? "w-4 bg-brand-peach/60"
+                  : "w-4 bg-brand-mist border border-brand-pastel"
               }`}
             />
           ))}
@@ -205,25 +205,25 @@ export default function OnboardingTourModal({ isOpen, onClose }: OnboardingTourM
         {/* Main Content */}
         <div className="p-6 space-y-4">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-aura-mist text-aura-coral border border-aura-pastel flex items-center justify-center flex-shrink-0 pop-hover">
+            <div className="w-12 h-12 rounded-2xl bg-brand-mist text-brand-coral border border-brand-pastel flex items-center justify-center flex-shrink-0 pop-hover">
               <Icon className="w-6 h-6" />
             </div>
             <div>
               <h2
                 id="onboarding-tour-title"
-                className="text-xl font-extrabold text-aura-charcoal tracking-tight"
+                className="text-xl font-extrabold text-brand-charcoal tracking-tight"
               >
                 {current.title}
               </h2>
-              <p className="text-xs text-aura-slate leading-relaxed mt-1">
+              <p className="text-xs text-brand-slate leading-relaxed mt-1">
                 {current.summary}
               </p>
             </div>
           </div>
 
-          <div className="rounded-2xl bg-aura-mist/40 border border-aura-pastel/80 p-4 space-y-2.5 pop-hover">
+          <div className="rounded-2xl bg-brand-mist/40 border border-brand-pastel/80 p-4 space-y-2.5 pop-hover">
             {current.bullets.map((b, i) => (
-              <div key={i} className="flex items-start gap-2.5 text-xs text-aura-charcoal">
+              <div key={i} className="flex items-start gap-2.5 text-xs text-brand-charcoal">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
                 <span className="leading-relaxed font-medium">{b}</span>
               </div>
@@ -232,22 +232,22 @@ export default function OnboardingTourModal({ isOpen, onClose }: OnboardingTourM
 
           {/* Dedicated Extension Download Callout on Step 1 */}
           {current.showExtensionDownload && (
-            <div className="rounded-2xl bg-gradient-to-r from-aura-mist via-white to-amber-50/70 border border-aura-peach/80 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pop-hover">
+            <div className="rounded-2xl bg-gradient-to-r from-brand-mist via-white to-amber-50/70 border border-brand-peach/80 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pop-hover">
               <div className="space-y-0.5">
-                <div className="flex items-center gap-1.5 text-xs font-extrabold text-aura-charcoal">
-                  <Puzzle className="w-4 h-4 text-aura-coral" />
-                  <span>AURA-MEET Chrome Extension (Manifest V3)</span>
+                <div className="flex items-center gap-1.5 text-xs font-extrabold text-brand-charcoal">
+                  <Puzzle className="w-4 h-4 text-brand-coral" />
+                  <span>Quorum Chrome Extension (Manifest V3)</span>
                 </div>
-                <p className="text-[11px] text-aura-slate">
-                  Includes <code className="font-mono text-aura-charcoal">manifest.json</code>, stereo 16kHz audio worklet, and Meet / Zoom / Teams room detector.
+                <p className="text-[11px] text-brand-slate">
+                  Includes <code className="font-mono text-brand-charcoal">manifest.json</code>, the stereo 16kHz recorder and the side panel. Always built from the latest code.
                 </p>
               </div>
 
               <a
                 href={api.getExtensionDownloadUrl()}
-                download="aura-meet-chrome-extension.zip"
+                download
                 onClick={handleDownloadClick}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-aura-peach to-aura-coral btn-3d whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-brand-peach to-brand-coral btn-3d whitespace-nowrap"
               >
                 <Download className="w-4 h-4" />
                 <span>Download Chrome Extension (.zip)</span>
@@ -259,7 +259,7 @@ export default function OnboardingTourModal({ isOpen, onClose }: OnboardingTourM
             <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-3.5 py-2 text-xs font-semibold text-emerald-900 flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
               <span>
-                Downloading <strong>aura-meet-chrome-extension.zip</strong>! Unzip it and load it via <code className="font-mono">chrome://extensions</code> → Load unpacked.
+                Downloading <strong>the Quorum extension .zip</strong>! Unzip it and load it via <code className="font-mono">chrome://extensions</code> → Load unpacked.
               </span>
             </div>
           )}
@@ -271,11 +271,11 @@ export default function OnboardingTourModal({ isOpen, onClose }: OnboardingTourM
         </div>
 
         {/* Footer Controls */}
-        <div className="px-6 py-4 bg-aura-mist/30 border-t border-aura-border flex flex-wrap items-center justify-between gap-3">
+        <div className="px-6 py-4 bg-brand-mist/30 border-t border-brand-border flex flex-wrap items-center justify-between gap-3">
           <button
             type="button"
             onClick={handleFinish}
-            className="text-xs font-bold text-aura-slate hover:text-aura-charcoal px-3 py-1.5 rounded-xl hover:bg-white transition-colors"
+            className="text-xs font-bold text-brand-slate hover:text-brand-charcoal px-3 py-1.5 rounded-xl hover:bg-white transition-colors"
           >
             Skip Tour
           </button>
@@ -285,7 +285,7 @@ export default function OnboardingTourModal({ isOpen, onClose }: OnboardingTourM
               <button
                 type="button"
                 onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-aura-charcoal bg-white border border-aura-pastel hover:bg-aura-mist btn-3d-light"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-brand-charcoal bg-white border border-brand-pastel hover:bg-brand-mist btn-3d-light"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span>Previous</span>
@@ -296,7 +296,7 @@ export default function OnboardingTourModal({ isOpen, onClose }: OnboardingTourM
               <button
                 type="button"
                 onClick={() => setStepIndex((i) => Math.min(TOUR_STEPS.length - 1, i + 1))}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-aura-peach to-aura-coral btn-3d"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-brand-peach to-brand-coral btn-3d"
               >
                 <span>Next Step</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -308,7 +308,7 @@ export default function OnboardingTourModal({ isOpen, onClose }: OnboardingTourM
                 className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 btn-3d"
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Get Started with AURA-MEET</span>
+                <span>Get Started with Quorum</span>
               </button>
             )}
           </div>

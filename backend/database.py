@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 
-DB_PATH = os.environ.get("AURA_DB_PATH") or os.path.join(os.path.dirname(__file__), "aura_meet.db")
+DB_PATH = os.environ.get("QUORUM_DB_PATH") or os.path.join(os.path.dirname(__file__), "quorum.db")
 
 def get_db():
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)

@@ -22,6 +22,7 @@ import {
   HardDrive
 } from "lucide-react";
 import { api, WhisperModelInfo } from "@/lib/api";
+import { useLiveEvents } from "@/lib/useLiveEvents";
 
 export default function SettingsControlCenterPage() {
   const [config, setConfig] = useState<any>({
@@ -58,18 +59,25 @@ export default function SettingsControlCenterPage() {
     try {
       const [wRes, detRes] = await Promise.all([
         api.getWhisperModels(),
-        api.getDetectionStatus().catch(() => null),
+        api.getStorageStats().catch(() => null),
       ]);
       if (wRes?.models) {
         setWhisperModels(wRes.models);
       }
-      if (detRes?.storage_stats) {
-        setStorageStats(detRes.storage_stats);
+      if (detRes?.directory) {
+        setStorageStats(detRes);
       }
     } catch (e) {
       console.warn("Could not load Whisper models:", e);
     }
   };
+
+  // Changes made from the extension's session settings appear here immediately
+  useLiveEvents((ev) => {
+    if (ev.type === "SETTINGS_UPDATED" && ev.settings) {
+      setConfig((prev: any) => ({ ...prev, ...ev.settings }));
+    }
+  });
 
   useEffect(() => {
     api.getSettings()
@@ -214,19 +222,19 @@ export default function SettingsControlCenterPage() {
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="rounded-3xl bg-white/85 backdrop-blur-md border border-aura-pastel/80 shadow-peach-md p-6">
+      <div className="rounded-3xl bg-white/85 backdrop-blur-md border border-brand-pastel/80 shadow-peach-md p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1.5">
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-aura-mist text-aura-coral border border-aura-pastel">
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-brand-mist text-brand-coral border border-brand-pastel">
                 Engine & Hardware Settings
               </span>
-              <span className="text-xs text-aura-slate font-medium">On-Device Privacy First</span>
+              <span className="text-xs text-brand-slate font-medium">On-Device Privacy First</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-aura-charcoal tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-brand-charcoal tracking-tight">
               Storage, Audio Location & Gemma 4 Routing
             </h1>
-            <p className="text-xs text-aura-slate mt-1 max-w-2xl leading-relaxed">
+            <p className="text-xs text-brand-slate mt-1 max-w-2xl leading-relaxed">
               Configure where the final meeting audio files are stored, set Gemma 4 endpoints, adjust Silero VAD silence stripping, and manage session storage.
             </p>
           </div>
@@ -235,7 +243,7 @@ export default function SettingsControlCenterPage() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-aura-peach to-aura-coral hover:opacity-95 shadow-peach-sm transition-all disabled:opacity-60"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-brand-peach to-brand-coral hover:opacity-95 shadow-peach-sm transition-all disabled:opacity-60"
             >
               <Save className="w-4 h-4" />
               <span>{saving ? "Saving Changes..." : "Save All Settings"}</span>
@@ -249,13 +257,13 @@ export default function SettingsControlCenterPage() {
         {/* Card 1: Final Audio File Location & Audio Conditioning (Col 7) */}
         <div className="lg:col-span-7 space-y-6">
           {/* Audio Storage Destination */}
-          <div className="rounded-3xl bg-white/85 backdrop-blur-md border border-aura-pastel/80 shadow-peach-sm p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-aura-border">
+          <div className="rounded-3xl bg-white/85 backdrop-blur-md border border-brand-pastel/80 shadow-peach-sm p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-brand-border">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-aura-mist text-aura-coral border border-aura-pastel">
+                <div className="p-1.5 rounded-lg bg-brand-mist text-brand-coral border border-brand-pastel">
                   <Folder className="w-4 h-4" />
                 </div>
-                <h2 className="text-sm font-bold uppercase tracking-wider text-aura-charcoal">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-brand-charcoal">
                   Final Audio File Directory Location
                 </h2>
               </div>
@@ -265,9 +273,9 @@ export default function SettingsControlCenterPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-aura-charcoal flex items-center justify-between">
+              <label className="text-xs font-bold text-brand-charcoal flex items-center justify-between">
                 <span>Save Final Session Audio (.wav) To:</span>
-                <span className="text-[11px] text-aura-coral font-medium">Customizable Mac Path</span>
+                <span className="text-[11px] text-brand-coral font-medium">Customizable Mac Path</span>
               </label>
               <div className="flex items-center gap-2">
                 <input
@@ -275,28 +283,28 @@ export default function SettingsControlCenterPage() {
                   value={config.audio_export_dir || ""}
                   onChange={(e) => setConfig({ ...config, audio_export_dir: e.target.value })}
                   placeholder="/Users/yuvrajpatel/MeetingShield/recordings"
-                  className="flex-1 px-3.5 py-2.5 text-xs rounded-xl border border-aura-pastel bg-aura-mist/40 text-aura-charcoal focus:outline-none focus:border-aura-coral focus:bg-white shadow-inner font-mono font-medium"
+                  className="flex-1 px-3.5 py-2.5 text-xs rounded-xl border border-brand-pastel bg-brand-mist/40 text-brand-charcoal focus:outline-none focus:border-brand-coral focus:bg-white shadow-inner font-mono font-medium"
                 />
               </div>
-              <p className="text-[11px] text-aura-slate leading-relaxed">
-                When a session finishes recording, AURA-MEET writes the complete dual-stream 16kHz WAV file into this directory as <code>[session-id].wav</code>.
+              <p className="text-[11px] text-brand-slate leading-relaxed">
+                When a session finishes recording, Quorum writes the complete dual-stream 16kHz WAV file into this directory as <code>[session-id].wav</code>.
               </p>
             </div>
 
             {/* Quick Presets */}
             <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
-              <span className="text-aura-slate font-semibold">Quick Presets:</span>
+              <span className="text-brand-slate font-semibold">Quick Presets:</span>
               <button
                 type="button"
                 onClick={() => setConfig({ ...config, audio_export_dir: "/Users/yuvrajpatel/MeetingShield/recordings" })}
-                className="px-2.5 py-1 rounded-lg bg-aura-mist text-aura-charcoal border border-aura-pastel hover:border-aura-peach transition-colors font-mono text-[10px]"
+                className="px-2.5 py-1 rounded-lg bg-brand-mist text-brand-charcoal border border-brand-pastel hover:border-brand-peach transition-colors font-mono text-[10px]"
               >
                 Project /recordings
               </button>
               <button
                 type="button"
                 onClick={() => setConfig({ ...config, audio_export_dir: "/Users/yuvrajpatel/Desktop/MeetingRecordings" })}
-                className="px-2.5 py-1 rounded-lg bg-aura-mist text-aura-charcoal border border-aura-pastel hover:border-aura-peach transition-colors font-mono text-[10px]"
+                className="px-2.5 py-1 rounded-lg bg-brand-mist text-brand-charcoal border border-brand-pastel hover:border-brand-peach transition-colors font-mono text-[10px]"
               >
                 Desktop/MeetingRecordings
               </button>
@@ -304,13 +312,13 @@ export default function SettingsControlCenterPage() {
           </div>
 
           {/* LM Studio Routing */}
-          <div className="rounded-3xl bg-white/85 backdrop-blur-md border border-aura-pastel/80 shadow-peach-sm p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-aura-border">
+          <div className="rounded-3xl bg-white/85 backdrop-blur-md border border-brand-pastel/80 shadow-peach-sm p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-brand-border">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-aura-mist text-aura-coral border border-aura-pastel">
+                <div className="p-1.5 rounded-lg bg-brand-mist text-brand-coral border border-brand-pastel">
                   <Cpu className="w-4 h-4" />
                 </div>
-                <h2 className="text-sm font-bold uppercase tracking-wider text-aura-charcoal">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-brand-charcoal">
                   LM Studio & Gemma 4 Routing
                 </h2>
               </div>
@@ -320,7 +328,7 @@ export default function SettingsControlCenterPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-aura-charcoal">
+              <label className="text-xs font-bold text-brand-charcoal">
                 LM Studio Local Server Endpoint:
               </label>
               <div className="flex items-center gap-2">
@@ -329,12 +337,12 @@ export default function SettingsControlCenterPage() {
                   value={config.lm_studio_base_url}
                   onChange={(e) => setConfig({ ...config, lm_studio_base_url: e.target.value })}
                   placeholder="http://localhost:1234/v1"
-                  className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-aura-pastel bg-aura-mist/40 text-aura-charcoal focus:outline-none focus:border-aura-coral focus:bg-white shadow-inner font-mono"
+                  className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-brand-pastel bg-brand-mist/40 text-brand-charcoal focus:outline-none focus:border-brand-coral focus:bg-white shadow-inner font-mono"
                 />
                 <button
                   onClick={handleTestConnection}
                   disabled={testingConnection}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-aura-coral bg-aura-mist border border-aura-pastel hover:bg-aura-pastel/60 transition-colors shadow-xs"
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-brand-coral bg-brand-mist border border-brand-pastel hover:bg-brand-pastel/60 transition-colors shadow-xs"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${testingConnection ? "animate-spin" : ""}`} />
                   <span>Test Connection</span>
@@ -365,11 +373,11 @@ export default function SettingsControlCenterPage() {
             )}
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-aura-charcoal">Active Model:</label>
+              <label className="text-xs font-bold text-brand-charcoal">Active Model:</label>
               <select
                 value={config.lm_studio_model}
                 onChange={(e) => setConfig({ ...config, lm_studio_model: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-aura-pastel bg-white text-aura-charcoal font-medium shadow-xs"
+                className="w-full px-3.5 py-2 text-xs rounded-xl border border-brand-pastel bg-white text-brand-charcoal font-medium shadow-xs"
               >
                 {modelsList.map((m) => (
                   <option key={m} value={m}>
@@ -384,22 +392,22 @@ export default function SettingsControlCenterPage() {
         {/* Card 2: Audio Pipeline, Profile & Clean Slate Controls (Col 5) */}
         <div className="lg:col-span-5 space-y-6">
           {/* Audio Conditioning & VAD */}
-          <div className="rounded-3xl bg-white/85 backdrop-blur-md border border-aura-pastel/80 shadow-peach-sm p-6 space-y-4">
-            <div className="flex items-center gap-2 pb-3 border-b border-aura-border">
-              <div className="p-1.5 rounded-lg bg-aura-mist text-aura-coral border border-aura-pastel">
+          <div className="rounded-3xl bg-white/85 backdrop-blur-md border border-brand-pastel/80 shadow-peach-sm p-6 space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b border-brand-border">
+              <div className="p-1.5 rounded-lg bg-brand-mist text-brand-coral border border-brand-pastel">
                 <Mic className="w-4 h-4" />
               </div>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-aura-charcoal">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-brand-charcoal">
                 Audio Conditioning & VAD
               </h2>
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-aura-mist/50 border border-aura-pastel/60">
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-brand-mist/50 border border-brand-pastel/60">
               <div>
-                <span className="text-xs font-bold text-aura-charcoal block">
+                <span className="text-xs font-bold text-brand-charcoal block">
                   Butterworth Bandpass Filter (80Hz–8kHz)
                 </span>
-                <span className="text-[11px] text-aura-slate">
+                <span className="text-[11px] text-brand-slate">
                   Cleans 50/60Hz electrical hum and mic rumble
                 </span>
               </div>
@@ -407,7 +415,7 @@ export default function SettingsControlCenterPage() {
                 type="checkbox"
                 checked={config.noise_cleaning_enabled}
                 onChange={(e) => setConfig({ ...config, noise_cleaning_enabled: e.target.checked })}
-                className="w-5 h-5 accent-aura-coral rounded cursor-pointer"
+                className="w-5 h-5 accent-brand-coral rounded cursor-pointer"
               />
             </div>
 
@@ -415,7 +423,7 @@ export default function SettingsControlCenterPage() {
             <div className="space-y-2.5 pt-1">
               <label
                 htmlFor="whisper-active-model-select"
-                className="text-xs font-bold text-aura-charcoal flex items-center justify-between"
+                className="text-xs font-bold text-brand-charcoal flex items-center justify-between"
               >
                 <span>Active Whisper ASR Model (Downloaded Only):</span>
                 <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-bold">
@@ -431,7 +439,7 @@ export default function SettingsControlCenterPage() {
                   setConfig({ ...config, whisper_model: nextModel });
                   await api.updateSettings({ whisper_model: nextModel });
                 }}
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-aura-pastel bg-white text-aura-charcoal font-bold shadow-xs"
+                className="w-full px-3.5 py-2 text-xs rounded-xl border border-brand-pastel bg-white text-brand-charcoal font-bold shadow-xs"
               >
                 {downloadedWhisperModels.length === 0 ? (
                   <option value="">No Whisper models downloaded — download one below</option>
@@ -445,10 +453,10 @@ export default function SettingsControlCenterPage() {
               </select>
 
               {/* Whisper Model Catalog: Downloaded vs Not Downloaded + Download Option */}
-              <div className="rounded-2xl bg-aura-mist/40 border border-aura-pastel/80 p-3 space-y-2">
-                <div className="flex items-center justify-between text-[11px] font-bold text-aura-charcoal px-1">
+              <div className="rounded-2xl bg-brand-mist/40 border border-brand-pastel/80 p-3 space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-bold text-brand-charcoal px-1">
                   <span>Whisper ASR Model Repository</span>
-                  <span className="text-[10px] text-aura-slate font-medium">Download to enable selection</span>
+                  <span className="text-[10px] text-brand-slate font-medium">Download to enable selection</span>
                 </div>
                 <div className="space-y-2">
                   {whisperModels.map((m) => {
@@ -460,13 +468,13 @@ export default function SettingsControlCenterPage() {
                         className={`p-2.5 rounded-xl border flex flex-wrap items-center justify-between gap-2 text-xs transition-all ${
                           m.downloaded
                             ? "bg-white border-emerald-200/90"
-                            : "bg-white/70 border-aura-border"
+                            : "bg-white/70 border-brand-border"
                         }`}
                       >
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-bold text-aura-charcoal">{m.name}</span>
-                            <span className="text-[10px] font-mono text-aura-slate">({m.size})</span>
+                            <span className="font-bold text-brand-charcoal">{m.name}</span>
+                            <span className="text-[10px] font-mono text-brand-slate">({m.size})</span>
                             {m.downloaded ? (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                 Downloaded
@@ -477,14 +485,14 @@ export default function SettingsControlCenterPage() {
                               </span>
                             )}
                           </div>
-                          <p className="text-[10.5px] text-aura-slate mt-0.5">{m.badge}</p>
+                          <p className="text-[10.5px] text-brand-slate mt-0.5">{m.badge}</p>
                         </div>
 
                         <div className="flex items-center gap-1.5">
                           {m.downloaded ? (
                             <>
                               {isActive ? (
-                                <span className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-aura-mist text-aura-coral border border-aura-pastel">
+                                <span className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-brand-mist text-brand-coral border border-brand-pastel">
                                   Selected
                                 </span>
                               ) : (
@@ -494,7 +502,7 @@ export default function SettingsControlCenterPage() {
                                     setConfig({ ...config, whisper_model: m.id });
                                     await api.updateSettings({ whisper_model: m.id });
                                   }}
-                                  className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-white hover:bg-aura-mist text-aura-charcoal border border-aura-pastel transition-colors"
+                                  className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-white hover:bg-brand-mist text-brand-charcoal border border-brand-pastel transition-colors"
                                 >
                                   Use Model
                                 </button>
@@ -504,7 +512,7 @@ export default function SettingsControlCenterPage() {
                                   type="button"
                                   onClick={() => handleDeleteWhisper(m.id)}
                                   aria-label={`Delete Whisper model ${m.id} from storage`}
-                                  className="p-1.5 rounded-lg text-aura-slate hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                  className="p-1.5 rounded-lg text-brand-slate hover:text-rose-600 hover:bg-rose-50 transition-colors"
                                   title="Delete downloaded model binary from storage"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
@@ -517,7 +525,7 @@ export default function SettingsControlCenterPage() {
                               onClick={() => handleDownloadWhisper(m.id)}
                               disabled={isDownloading}
                               aria-label={`Download Whisper model ${m.id}`}
-                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold text-white bg-gradient-to-r from-aura-peach to-aura-coral hover:opacity-95 shadow-xs disabled:opacity-60"
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold text-white bg-gradient-to-r from-brand-peach to-brand-coral hover:opacity-95 shadow-xs disabled:opacity-60"
                             >
                               {isDownloading ? (
                                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -537,14 +545,14 @@ export default function SettingsControlCenterPage() {
 
             {/* Language Selector */}
             <div className="space-y-1.5 pt-1">
-              <label className="text-xs font-bold text-aura-charcoal flex items-center justify-between">
+              <label className="text-xs font-bold text-brand-charcoal flex items-center justify-between">
                 <span>Transcription Language:</span>
                 <span className="text-[10px] text-emerald-600 font-semibold">99+ Languages</span>
               </label>
               <select
                 value={config.whisper_language || "auto"}
                 onChange={(e) => setConfig({ ...config, whisper_language: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-aura-pastel bg-white text-aura-charcoal font-medium shadow-xs"
+                className="w-full px-3.5 py-2 text-xs rounded-xl border border-brand-pastel bg-white text-brand-charcoal font-medium shadow-xs"
               >
                 <option value="auto">🌐 Auto-Detect Language (Identifies language automatically)</option>
                 <option value="en">English</option>
@@ -564,24 +572,24 @@ export default function SettingsControlCenterPage() {
             </div>
 
             {/* Hardware Mic Tester */}
-            <div className="pt-2 border-t border-aura-border/60">
+            <div className="pt-2 border-t border-brand-border/60">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-aura-charcoal flex items-center gap-1.5">
-                  <Volume2 className="w-3.5 h-3.5 text-aura-coral" />
+                <span className="text-xs font-bold text-brand-charcoal flex items-center gap-1.5">
+                  <Volume2 className="w-3.5 h-3.5 text-brand-coral" />
                   Hardware Microphone Level:
                 </span>
                 <button
                   type="button"
                   onClick={handleToggleMicTest}
-                  className="text-[11px] font-bold text-aura-coral hover:underline"
+                  className="text-[11px] font-bold text-brand-coral hover:underline"
                 >
                   {micTesting ? "Stop Test" : "Test Live Mic"}
                 </button>
               </div>
 
-              <div className="h-2.5 w-full bg-aura-mist rounded-full overflow-hidden border border-aura-pastel/60">
+              <div className="h-2.5 w-full bg-brand-mist rounded-full overflow-hidden border border-brand-pastel/60">
                 <div
-                  className="h-full bg-gradient-to-r from-aura-peach to-aura-coral transition-all duration-75"
+                  className="h-full bg-gradient-to-r from-brand-peach to-brand-coral transition-all duration-75"
                   style={{ width: `${micLevel}%` }}
                 />
               </div>
@@ -589,33 +597,33 @@ export default function SettingsControlCenterPage() {
           </div>
 
           {/* User Profile & Calendar */}
-          <div className="rounded-3xl bg-white/85 backdrop-blur-md border border-aura-pastel/80 shadow-peach-sm p-6 space-y-4">
-            <div className="flex items-center gap-2 pb-3 border-b border-aura-border">
-              <div className="p-1.5 rounded-lg bg-aura-mist text-aura-coral border border-aura-pastel">
+          <div className="rounded-3xl bg-white/85 backdrop-blur-md border border-brand-pastel/80 shadow-peach-sm p-6 space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b border-brand-border">
+              <div className="p-1.5 rounded-lg bg-brand-mist text-brand-coral border border-brand-pastel">
                 <Calendar className="w-4 h-4" />
               </div>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-aura-charcoal">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-brand-charcoal">
                 User Identity & Calendar
               </h2>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-aura-charcoal">Spoken User Tag (ME):</label>
+              <label className="text-xs font-bold text-brand-charcoal">Spoken User Tag (ME):</label>
               <input
                 type="text"
                 value={config.user_name}
                 onChange={(e) => setConfig({ ...config, user_name: e.target.value })}
                 placeholder="Robin"
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-aura-pastel bg-white text-aura-charcoal font-medium shadow-xs"
+                className="w-full px-3.5 py-2 text-xs rounded-xl border border-brand-pastel bg-white text-brand-charcoal font-medium shadow-xs"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-aura-charcoal">Default Calendar:</label>
+              <label className="text-xs font-bold text-brand-charcoal">Default Calendar:</label>
               <select
                 value={config.default_calendar}
                 onChange={(e) => setConfig({ ...config, default_calendar: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-aura-pastel bg-white text-aura-charcoal font-medium shadow-xs"
+                className="w-full px-3.5 py-2 text-xs rounded-xl border border-brand-pastel bg-white text-brand-charcoal font-medium shadow-xs"
               >
                 <option value="google">Google Calendar</option>
                 <option value="outlook">Microsoft Outlook (Web & Desktop)</option>
@@ -625,25 +633,25 @@ export default function SettingsControlCenterPage() {
           </div>
 
           {/* Database & Clean Slate Management */}
-          <div className="rounded-3xl bg-white/85 backdrop-blur-md border border-aura-pastel/80 shadow-peach-sm p-6 space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-aura-border">
+          <div className="rounded-3xl bg-white/85 backdrop-blur-md border border-brand-pastel/80 shadow-peach-sm p-6 space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-brand-border">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-aura-mist text-aura-coral border border-aura-pastel">
+                <div className="p-1.5 rounded-lg bg-brand-mist text-brand-coral border border-brand-pastel">
                   <Database className="w-4 h-4" />
                 </div>
-                <h2 className="text-sm font-bold uppercase tracking-wider text-aura-charcoal">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-brand-charcoal">
                   Session Storage Management
                 </h2>
               </div>
               {storageStats && (
-                <span className="text-[10px] font-mono font-bold text-aura-charcoal bg-aura-mist px-2.5 py-0.5 rounded-full border border-aura-pastel flex items-center gap-1">
-                  <HardDrive className="w-3 h-3 text-aura-coral" />
+                <span className="text-[10px] font-mono font-bold text-brand-charcoal bg-brand-mist px-2.5 py-0.5 rounded-full border border-brand-pastel flex items-center gap-1">
+                  <HardDrive className="w-3 h-3 text-brand-coral" />
                   {storageStats.session_folders.length} folders · {storageStats.total_files} files
                 </span>
               )}
             </div>
 
-            <p className="text-[11px] text-aura-slate leading-relaxed">
+            <p className="text-[11px] text-brand-slate leading-relaxed">
               Deleting any session or resetting data physically deletes its session directory, <code>audio.wav</code>, and <code>meeting_notes.md</code> files from disk storage.
             </p>
 
@@ -659,9 +667,9 @@ export default function SettingsControlCenterPage() {
               <button
                 type="button"
                 onClick={handleRestoreDemo}
-                className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold text-aura-charcoal bg-aura-mist border border-aura-pastel hover:bg-aura-pastel/50 transition-colors"
+                className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold text-brand-charcoal bg-brand-mist border border-brand-pastel hover:bg-brand-pastel/50 transition-colors"
               >
-                <RefreshCw className="w-3.5 h-3.5 text-aura-coral" />
+                <RefreshCw className="w-3.5 h-3.5 text-brand-coral" />
                 <span>Restore Demo Data</span>
               </button>
             </div>

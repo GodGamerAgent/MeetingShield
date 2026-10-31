@@ -108,7 +108,7 @@ class IndividualTracker:
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 person_id, name, role or "Colleague", "",
-                "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
+                "",
                 now_iso, now_iso, 1, talk_time_sec, 85,
                 f"Prefers concise data and direct communication. Respects clear deadline boundaries.",
                 "", now_iso, now_iso

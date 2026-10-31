@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Comprehensive End-to-End Test Suite for AURA-MEET
+Comprehensive End-to-End Test Suite for QUORUM
 Tests every single backend module, API endpoint, WebSocket pipeline, and audio processing.
 """
 
@@ -19,10 +19,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Run against a throwaway database, config and recordings folder so real sessions are never touched
 import tempfile
-_TMP = tempfile.mkdtemp(prefix="aura-test-")
-os.environ["AURA_DB_PATH"] = os.path.join(_TMP, "test.db")
-os.environ["AURA_CONFIG_FILE"] = os.path.join(_TMP, "config.json")
-os.environ["AURA_AUDIO_DIR"] = os.path.join(_TMP, "recordings")
+_TMP = tempfile.mkdtemp(prefix="quorum-test-")
+os.environ["QUORUM_DB_PATH"] = os.path.join(_TMP, "test.db")
+os.environ["QUORUM_CONFIG_FILE"] = os.path.join(_TMP, "config.json")
+os.environ["QUORUM_AUDIO_DIR"] = os.path.join(_TMP, "recordings")
 
 from database import init_db, get_db, clear_all_data
 from config_store import config_store
@@ -51,7 +51,7 @@ def test(name, fn):
         failed += 1
 
 print("\n=======================================================")
-print("     STARTING AURA-MEET COMPREHENSIVE TEST SUITE       ")
+print("     STARTING QUORUM COMPREHENSIVE TEST SUITE       ")
 print("=======================================================\n")
 
 # 1. DATABASE TESTS
@@ -78,7 +78,7 @@ def test_settings_endpoints():
     assert "lm_studio_base_url" in cfg
 
     # Test updating settings
-    test_dir = os.environ["AURA_AUDIO_DIR"]
+    test_dir = os.environ["QUORUM_AUDIO_DIR"]
     update_res = client.post("/api/settings", json={
         "audio_export_dir": test_dir,
         "default_calendar": "apple",

@@ -1,6 +1,6 @@
 {
-  "name": "AURA-MEET",
-  "description": "On-Device Smart Meeting Intelligence, Granola-style Note Taking, and Behavioral Response Copilot powered by Gemma 4",
+  "name": "Quorum",
+  "description": "Private, on-device meeting notes: record a meeting tab, transcribe with Whisper, summarize decisions and owners with Gemma 4.",
   "requestFramePermissions": [
     "microphone"
   ]

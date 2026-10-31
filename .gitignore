@@ -1,34 +1,34 @@
+# Secrets & local config
+.env
+.env.local
+backend/config.json
+
 # Python
 backend/venv/
-backend/__pycache__/
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
 
-# Models (large binaries)
+# Models (large binaries, downloaded on first run)
 models
 backend/models/
 *.bin
 
-# Next.js / Node
-web/node_modules/
-web/.next/
-web/out/
-.next/
+# Node / Next.js
 node_modules/
+web/.next/
+web/.next-dev/
+web/out/
+*.tsbuildinfo
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+web/.backup/
 
-# Environment & Databases
-backend/aura_meet.db
-backend/aura_meet.db-journal
-.env
-.env.local
-.DS_Store
-
-# User Recordings (large audio)
+# Local data: databases and meeting recordings never belong in Git
+backend/*.db
+backend/*.db-journal
+backend/*.db.checkpoint
 recordings/*
 !recordings/.gitkeep
+
+# Editors / OS / tools
+.DS_Store
+.aistudio/

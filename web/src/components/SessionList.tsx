@@ -89,8 +89,8 @@ export function StatusBadge({ status, progress }: { status: string; progress?: S
 export default function SessionList({ meetings, progress, onDelete }: SessionListProps) {
   if (meetings.length === 0) {
     return (
-      <div className="text-center py-10 text-xs text-aura-slate">
-        <p className="font-semibold text-aura-charcoal">No sessions yet</p>
+      <div className="text-center py-10 text-xs text-brand-slate">
+        <p className="font-semibold text-brand-charcoal">No sessions yet</p>
         <p className="mt-1">Every meeting you record becomes its own session here.</p>
       </div>
     );
@@ -103,7 +103,7 @@ export default function SessionList({ meetings, progress, onDelete }: SessionLis
         return (
           <li
             key={m.id}
-            className="group scroll-reveal flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl bg-white/95 border border-aura-pastel/80 hover:bg-aura-mist/40 pop-hover"
+            className="group scroll-reveal flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl bg-white/95 border border-brand-pastel/80 hover:bg-brand-mist/40 pop-hover"
             style={{ ["--reveal-delay" as any]: `${Math.min(idx * 35, 180)}ms` }}
           >
             {/* Primary Clickable Session Link */}
@@ -112,11 +112,11 @@ export default function SessionList({ meetings, progress, onDelete }: SessionLis
               className="flex-1 min-w-0 cursor-pointer focus:outline-none"
             >
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-aura-charcoal truncate group-hover:text-aura-coral transition-colors">
+                <span className="text-sm font-bold text-brand-charcoal truncate group-hover:text-brand-coral transition-colors">
                   {m.title}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-x-2 text-[11px] text-aura-slate mt-0.5">
+              <div className="flex flex-wrap items-center gap-x-2 text-[11px] text-brand-slate mt-0.5">
                 <span suppressHydrationWarning>
                   {new Date(m.created_at).toLocaleString([], {
                     month: "short",
@@ -149,7 +149,7 @@ export default function SessionList({ meetings, progress, onDelete }: SessionLis
 
               <Link
                 href={`/meetings/${m.id}`}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-aura-charcoal bg-white border border-aura-pastel hover:bg-aura-mist hover:text-aura-coral btn-3d-light"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-brand-charcoal bg-white border border-brand-pastel hover:bg-brand-mist hover:text-brand-coral btn-3d-light"
                 title={`Open session ${m.title}`}
               >
                 <span>Open</span>
@@ -164,7 +164,7 @@ export default function SessionList({ meetings, progress, onDelete }: SessionLis
                     onDelete(m.id);
                   }}
                   aria-label={`Delete session ${m.title}`}
-                  className="p-2 rounded-xl text-aura-slate bg-white border border-aura-pastel/80 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 btn-3d-light"
+                  className="p-2 rounded-xl text-brand-slate bg-white border border-brand-pastel/80 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 btn-3d-light"
                   title="Delete session and remove storage files"
                 >
                   <Trash2 className="w-3.5 h-3.5" />

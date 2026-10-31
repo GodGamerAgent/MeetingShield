@@ -1,4 +1,4 @@
-// AURA-MEET single-stream capture engine (offscreen document)
+// Quorum single-stream capture engine (offscreen document)
 // Mic -> left channel, meeting tab -> right channel, one sample-aligned stereo stream to the backend.
 // Nothing is transcribed live; the backend stores audio.wav and transcribes once the meeting ends.
 
@@ -48,22 +48,7 @@ async function startCapture({ meetingId: id, streamId }) {
   await ctx.audioWorklet.addModule("recorder-worklet.js");
   merger = ctx.createChannelMerger(2);
 
-  // Meeting tab audio (right channel). tabCapture mutes the tab, so route it back to the speakers.
-  let tabOk = false;
-  try {
-    tabStream = await navigator.mediaDevices.getUserMedia({
-      audio: { mandatory: { chromeMediaSource: "tab", chromeMediaSourceId: streamId } },
-      video: false,
-    });
-    const tabSource = ctx.createMediaStreamSource(tabStream);
-    tabSource.connect(ctx.destination);
-    tabSource.connect(merger, 0, 1);
-    tabOk = true;
-    tabStream.getAudioTracks()[0].addEventListener("ended", () => reportError("Meeting tab audio stopped."));
-  } catch (err) {
-    console.warn("[AuraMeet] Tab capture failed:", err);
-  }
-
+  const tabOk = streamId ? await attachTab(streamId) : false;
   const micOk = await attachMic();
 
   if (!tabOk && !micOk) {
@@ -89,6 +74,27 @@ async function startCapture({ meetingId: id, streamId }) {
   return { ok: true, micOk, tabOk };
 }
 
+// Meeting tab audio (right channel). tabCapture mutes the tab, so route it back to the speakers.
+async function attachTab(streamId) {
+  if (!ctx || !merger || !streamId) return false;
+  if (tabStream) return true;
+  try {
+    tabStream = await navigator.mediaDevices.getUserMedia({
+      audio: { mandatory: { chromeMediaSource: "tab", chromeMediaSourceId: streamId } },
+      video: false,
+    });
+    const tabSource = ctx.createMediaStreamSource(tabStream);
+    tabSource.connect(ctx.destination);
+    tabSource.connect(merger, 0, 1);
+    tabStream.getAudioTracks()[0].addEventListener("ended", () => reportError("Meeting tab audio stopped."));
+    return true;
+  } catch (err) {
+    console.warn("[Quorum] Tab capture failed:", err);
+    tabStream = null;
+    return false;
+  }
+}
+
 // Microphone (left channel). Echo cancellation keeps the meeting audio out of the mic.
 async function attachMic() {
   if (!ctx || !merger) return false;
@@ -101,7 +107,7 @@ async function attachMic() {
     ctx.createMediaStreamSource(micStream).connect(merger, 0, 0);
     return true;
   } catch (err) {
-    console.warn("[AuraMeet] Microphone capture failed:", err);
+    console.warn("[Quorum] Microphone capture failed:", err);
     return false;
   }
 }
@@ -137,6 +143,9 @@ function connectSocket() {
     try {
       const data = JSON.parse(event.data);
       if (data.status === "ENDED" && endResolver) endResolver();
+      if (data.status === "DELETED" && !stopping) {
+        chrome.runtime.sendMessage({ type: "DISCARD_RECORDING" }).catch(() => {});
+      }
       if (data.status === "STOP_REQUESTED" && !stopping) {
         chrome.runtime.sendMessage({ type: "STOP_RECORDING", reason: "dashboard" }).catch(() => {});
       }

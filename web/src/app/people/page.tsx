@@ -90,31 +90,31 @@ export default function PeopleTrackerPage() {
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="rounded-3xl bg-white/85 backdrop-blur-md border border-aura-pastel/80 shadow-peach-md p-6">
+      <div className="rounded-3xl bg-white/85 backdrop-blur-md border border-brand-pastel/80 shadow-peach-md p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1.5">
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-aura-mist text-aura-coral border border-aura-pastel">
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-brand-mist text-brand-coral border border-brand-pastel">
                 1-on-1 Relationship Dossier
               </span>
-              <span className="text-xs text-aura-slate font-medium">Longitudinal Memory Tracker</span>
+              <span className="text-xs text-brand-slate font-medium">Longitudinal Memory Tracker</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-aura-charcoal tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-brand-charcoal tracking-tight">
               Individual Conversation & Commitment Dossier
             </h1>
-            <p className="text-xs text-aura-slate mt-1 max-w-2xl leading-relaxed">
+            <p className="text-xs text-brand-slate mt-1 max-w-2xl leading-relaxed">
               Track longitudinal interactions, commitments made across meetings, and AI-synthesized communication playbooks for every colleague.
             </p>
           </div>
 
           <div className="relative min-w-[240px]">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-aura-slate" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-brand-slate" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search people, roles..."
-              className="w-full pl-9 pr-3.5 py-2 text-xs rounded-xl bg-aura-mist/60 border border-aura-pastel text-aura-charcoal focus:outline-none focus:border-aura-coral focus:bg-white shadow-inner"
+              className="w-full pl-9 pr-3.5 py-2 text-xs rounded-xl bg-brand-mist/60 border border-brand-pastel text-brand-charcoal focus:outline-none focus:border-brand-coral focus:bg-white shadow-inner"
             />
           </div>
         </div>
@@ -123,14 +123,14 @@ export default function PeopleTrackerPage() {
       {/* Main Grid: Directory Column + Detailed Longitudinal Dossier */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left: People Directory (Col 4) */}
-        <div className="lg:col-span-4 rounded-3xl bg-white/85 backdrop-blur-md border border-aura-pastel/80 shadow-peach-sm p-4 space-y-2 max-h-[680px] overflow-y-auto">
-          <div className="px-2 py-1 text-xs font-bold uppercase tracking-wider text-aura-slate">
+        <div className="lg:col-span-4 rounded-3xl bg-white/85 backdrop-blur-md border border-brand-pastel/80 shadow-peach-sm p-4 space-y-2 max-h-[680px] overflow-y-auto">
+          <div className="px-2 py-1 text-xs font-bold uppercase tracking-wider text-brand-slate">
             Directory ({filteredPeople.length})
           </div>
 
           {filteredPeople.length === 0 ? (
-            <div className="p-8 text-center text-aura-slate text-xs space-y-1">
-              <p className="font-bold text-aura-charcoal">No Colleagues Tracked</p>
+            <div className="p-8 text-center text-brand-slate text-xs space-y-1">
+              <p className="font-bold text-brand-charcoal">No Colleagues Tracked</p>
               <p className="text-[11px]">Once meetings with participants are recorded, their dossiers appear here.</p>
             </div>
           ) : (
@@ -142,21 +142,17 @@ export default function PeopleTrackerPage() {
                 onClick={() => loadDossier(p.id)}
                 className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between group ${
                   isSelected
-                    ? "bg-gradient-to-r from-aura-mist to-white border-aura-peach shadow-peach-sm translate-x-1"
-                    : "bg-white/80 border-aura-border hover:border-aura-pastel"
+                    ? "bg-gradient-to-r from-brand-mist to-white border-brand-peach shadow-peach-sm translate-x-1"
+                    : "bg-white/80 border-brand-border hover:border-brand-pastel"
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <img
-                    src={p.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150"}
-                    alt={p.name}
-                    className="w-10 h-10 rounded-full object-cover border border-aura-pastel"
-                  />
+                  <Initials name={p.name} className="w-10 h-10 rounded-full text-xs" />
                   <div className="min-w-0">
-                    <div className="font-bold text-xs text-aura-charcoal truncate group-hover:text-aura-coral transition-colors">
+                    <div className="font-bold text-xs text-brand-charcoal truncate group-hover:text-brand-coral transition-colors">
                       {p.name}
                     </div>
-                    <div className="text-[11px] text-aura-slate truncate">{p.role}</div>
+                    <div className="text-[11px] text-brand-slate truncate">{p.role}</div>
                   </div>
                 </div>
 
@@ -164,7 +160,7 @@ export default function PeopleTrackerPage() {
                   <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                     {p.reliability_score}% Rel
                   </span>
-                  <span className="text-[10px] text-aura-slate mt-1 font-medium">
+                  <span className="text-[10px] text-brand-slate mt-1 font-medium">
                     {p.total_meetings} meetings
                   </span>
                 </div>
@@ -174,35 +170,31 @@ export default function PeopleTrackerPage() {
         </div>
 
         {/* Right: Detailed Longitudinal Dossier (Col 8) */}
-        <div className="lg:col-span-8 rounded-3xl bg-white/85 backdrop-blur-md border border-aura-pastel/80 shadow-peach-sm p-6 space-y-6">
+        <div className="lg:col-span-8 rounded-3xl bg-white/85 backdrop-blur-md border border-brand-pastel/80 shadow-peach-sm p-6 space-y-6">
           {selectedPerson ? (
             <>
               {/* Profile Card Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-aura-border">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-brand-border">
                 <div className="flex items-center gap-4">
-                  <img
-                    src={selectedPerson.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150"}
-                    alt={selectedPerson.name}
-                    className="w-14 h-14 rounded-2xl object-cover border-2 border-aura-peach shadow-peach-sm"
-                  />
+                  <Initials name={selectedPerson.name} className="w-14 h-14 rounded-2xl text-base shadow-peach-sm" />
                   <div>
-                    <h2 className="text-xl font-extrabold text-aura-charcoal">
+                    <h2 className="text-xl font-extrabold text-brand-charcoal">
                       {selectedPerson.name}
                     </h2>
-                    <p className="text-xs text-aura-slate font-medium">{selectedPerson.role}</p>
-                    <p className="text-[11px] text-aura-slate/80">{selectedPerson.email}</p>
+                    <p className="text-xs text-brand-slate font-medium">{selectedPerson.role}</p>
+                    <p className="text-[11px] text-brand-slate/80">{selectedPerson.email}</p>
                   </div>
                 </div>
 
                 {/* Score Pills & Delete Dossier */}
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-aura-mist border border-aura-pastel text-center">
-                    <span className="text-[10px] uppercase font-bold text-aura-slate block">Reliability</span>
+                  <div className="p-2.5 rounded-xl bg-brand-mist border border-brand-pastel text-center">
+                    <span className="text-[10px] uppercase font-bold text-brand-slate block">Reliability</span>
                     <span className="text-base font-extrabold text-emerald-700">{selectedPerson.reliability_score}%</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-aura-mist border border-aura-pastel text-center">
-                    <span className="text-[10px] uppercase font-bold text-aura-slate block">Total Meetings</span>
-                    <span className="text-base font-extrabold text-aura-coral">{selectedPerson.total_meetings}</span>
+                  <div className="p-2.5 rounded-xl bg-brand-mist border border-brand-pastel text-center">
+                    <span className="text-[10px] uppercase font-bold text-brand-slate block">Total Meetings</span>
+                    <span className="text-base font-extrabold text-brand-coral">{selectedPerson.total_meetings}</span>
                   </div>
                   <button
                     type="button"
@@ -218,20 +210,20 @@ export default function PeopleTrackerPage() {
               </div>
 
               {/* AI Communication Cheat Sheet */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-aura-mist/90 to-white border border-aura-peach/70 shadow-xs space-y-2">
-                <div className="flex items-center gap-2 text-aura-coral font-bold text-xs uppercase tracking-wider">
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-brand-mist/90 to-white border border-brand-peach/70 shadow-xs space-y-2">
+                <div className="flex items-center gap-2 text-brand-coral font-bold text-xs uppercase tracking-wider">
                   <Sparkles className="w-4 h-4" />
                   <span>How to Communicate Effectively with {selectedPerson.name}</span>
                 </div>
-                <p className="text-xs font-semibold text-aura-charcoal leading-relaxed">
+                <p className="text-xs font-semibold text-brand-charcoal leading-relaxed">
                   {selectedPerson.communication_cheat_sheet}
                 </p>
               </div>
 
               {/* Promises & Commitments Tracker */}
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-aura-charcoal">
-                  <ShieldCheck className="w-4 h-4 text-aura-coral" />
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-charcoal">
+                  <ShieldCheck className="w-4 h-4 text-brand-coral" />
                   <span>Cross-Meeting Promises & Commitments</span>
                 </div>
 
@@ -266,12 +258,12 @@ export default function PeopleTrackerPage() {
 
               {/* Chronological Spoken Quotes Across Meetings */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-aura-charcoal">
+                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-brand-charcoal">
                   <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-aura-coral" />
+                    <Clock className="w-4 h-4 text-brand-coral" />
                     <span>Verbatim Conversation History</span>
                   </div>
-                  <span className="text-[11px] text-aura-slate font-medium">
+                  <span className="text-[11px] text-brand-slate font-medium">
                     {(selectedPerson.spoken_segments || []).length} quotes logged
                   </span>
                 </div>
@@ -280,28 +272,28 @@ export default function PeopleTrackerPage() {
                   {(selectedPerson.spoken_segments || []).map((seg: any) => (
                     <div
                       key={seg.id}
-                      className="p-3 rounded-xl bg-white border border-aura-border text-xs leading-relaxed space-y-1"
+                      className="p-3 rounded-xl bg-white border border-brand-border text-xs leading-relaxed space-y-1"
                     >
-                      <div className="flex items-center justify-between text-[10px] text-aura-slate">
-                        <span className="font-semibold text-aura-charcoal">{seg.meeting_title || "Architecture Review"}</span>
-                        <span className="font-mono text-aura-coral">[{seg.timestamp_badge}]</span>
+                      <div className="flex items-center justify-between text-[10px] text-brand-slate">
+                        <span className="font-semibold text-brand-charcoal">{seg.meeting_title || "Architecture Review"}</span>
+                        <span className="font-mono text-brand-coral">[{seg.timestamp_badge}]</span>
                       </div>
-                      <p className="text-aura-charcoal font-medium italic">"{seg.text}"</p>
+                      <p className="text-brand-charcoal font-medium italic">"{seg.text}"</p>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Editable Private Notes */}
-              <div className="pt-2 border-t border-aura-border space-y-2">
+              <div className="pt-2 border-t border-brand-border space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-aura-charcoal uppercase tracking-wider">
+                  <span className="text-xs font-bold text-brand-charcoal uppercase tracking-wider">
                     Private Strategic Notes
                   </span>
                   <button
                     onClick={handleSaveNotes}
                     disabled={savingNotes}
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-aura-peach to-aura-coral hover:opacity-90 transition-all shadow-xs"
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-brand-peach to-brand-coral hover:opacity-90 transition-all shadow-xs"
                   >
                     <Save className="w-3.5 h-3.5" />
                     <span>{savingNotes ? "Saving..." : saveSuccess ? "Saved!" : "Save Notes"}</span>
@@ -312,13 +304,13 @@ export default function PeopleTrackerPage() {
                   onChange={(e) => setNotesInput(e.target.value)}
                   rows={3}
                   placeholder="Record working style observations, career goals, personal context..."
-                  className="w-full p-3 text-xs rounded-xl border border-aura-pastel bg-aura-mist/40 text-aura-charcoal focus:outline-none focus:border-aura-coral focus:bg-white shadow-inner"
+                  className="w-full p-3 text-xs rounded-xl border border-brand-pastel bg-brand-mist/40 text-brand-charcoal focus:outline-none focus:border-brand-coral focus:bg-white shadow-inner"
                 />
               </div>
             </>
           ) : (
-            <div className="text-center p-12 text-aura-slate text-xs space-y-1">
-              <p className="font-bold text-aura-charcoal">
+            <div className="text-center p-12 text-brand-slate text-xs space-y-1">
+              <p className="font-bold text-brand-charcoal">
                 {people.length === 0 ? "No Participants Tracked Yet" : "Select an Individual"}
               </p>
               <p className="text-[11px]">
@@ -330,6 +322,21 @@ export default function PeopleTrackerPage() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// Local initials instead of remote stock photos: no outside requests, no misleading faces
+function Initials({ name, className = "" }: { name: string; className?: string }) {
+  const letters = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join("");
+  return (
+    <div className={`flex items-center justify-center flex-shrink-0 font-extrabold text-white bg-gradient-to-br from-brand-peach to-brand-coral ${className}`} aria-hidden>
+      {letters || "?"}
     </div>
   );
 }

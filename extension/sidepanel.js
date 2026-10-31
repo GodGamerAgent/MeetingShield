@@ -1,14 +1,14 @@
-// AURA-MEET Side Panel: current meeting, notes, separate sessions and Q&A.
+// Quorum side panel: start/stop recording, notes, sessions, Q&A and session settings.
 // Recording itself lives in the background worker + offscreen document, so closing this panel never stops it.
 
 const BACKEND = "http://localhost:8000";
 const WS_LIVE = "ws://localhost:8000/ws/live";
-const DASHBOARD = "http://localhost:3000";
+const DASHBOARD = "http://localhost:3001";
 
 const $ = (id) => document.getElementById(id);
 const nowCard = $("now-card");
 
-let state = { recording: null, detected: {}, lastSession: null, lastError: null };
+let state = { recording: null, lastSession: null, lastError: null, pendingSession: null };
 let activeTabId = null;
 let meetings = [];
 const progress = {}; // meetingId -> {progress, message, status}
@@ -16,6 +16,9 @@ let timerInterval = null;
 let notesMeetingId = null;
 let notesTimer = null;
 let notesDirty = false;
+let settings = {};
+let config = {};
+let sessionFormDirty = false;
 
 // ----------------- Boot -----------------
 document.addEventListener("DOMContentLoaded", async () => {
@@ -24,9 +27,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   const res = await chrome.runtime.sendMessage({ type: "GET_STATE" }).catch(() => null);
   if (res) {
     state = res.state;
-    $("auto-record").checked = Boolean(res.settings?.autoRecord);
+    applySettings(res.settings);
   }
   render();
+  const { openView } = await chrome.storage.session.get("openView").catch(() => ({}));
+  if (openView) showView(openView);
   checkBackend();
   setInterval(checkBackend, 10000);
   loadSessions();
@@ -39,6 +44,8 @@ chrome.runtime.onMessage.addListener((message) => {
     state = message.state;
     render();
     if (wasRecording !== state.recording?.meetingId) loadSessions();
+  } else if (message.type === "OPEN_VIEW") {
+    showView(message.view);
   } else if (message.type === "LEVELS" && state.recording?.meetingId === message.meetingId) {
     $("mic-meter").style.width = `${Math.round(message.mic * 100)}%`;
     $("tab-meter").style.width = `${Math.round(message.tab * 100)}%`;
@@ -56,8 +63,7 @@ async function refreshActiveTab() {
 // ----------------- Rendering -----------------
 function render() {
   const rec = state.recording;
-  const detected = activeTabId != null ? state.detected[activeTabId] : null;
-  const view = rec ? "recording" : detected ? "detected" : "idle";
+  const view = rec ? "recording" : "idle";
   nowCard.dataset.state = view;
 
   clearInterval(timerInterval);
@@ -68,9 +74,10 @@ function render() {
     if (document.activeElement !== $("rec-title")) $("rec-title").value = rec.title;
     document.querySelector(".meter:nth-child(1)").classList.toggle("off", !rec.micOk);
     document.querySelector(".meter:nth-child(2)").classList.toggle("off", !rec.tabOk);
-  } else if (detected) {
-    $("detected-platform").textContent = platformName(detected.platform);
-    $("detected-title").textContent = detected.title || "Meeting";
+  } else {
+    $("start-btn").textContent = state.pendingSession?.title
+      ? `● Start recording “${state.pendingSession.title}”`
+      : "● Start recording this tab";
   }
 
   // Alert
@@ -80,6 +87,8 @@ function render() {
   } else {
     $("alert").hidden = true;
   }
+
+  if (!sessionFormDirty) fillSessionForm();
 
   // Notes follow the live session, else the one that just ended
   const target = rec?.meetingId || state.lastSession?.meetingId || null;
@@ -189,8 +198,18 @@ function connectLive() {
     } else if (msg.type === "MEETING_PROCESSED" || msg.type === "PROCESSING_ERROR") {
       delete progress[msg.meeting_id];
       scheduleSessionsReload();
-    } else if (msg.type === "RECORDING_STARTED" || msg.type === "RECORDING_STOPPED") {
+    } else if (["RECORDING_STARTED", "RECORDING_STOPPED", "MEETING_CREATED", "MEETING_UPDATED", "MEETING_DELETED", "SESSIONS_CLEARED"].includes(msg.type)) {
       scheduleSessionsReload();
+      if (msg.type === "MEETING_UPDATED" && msg.meeting_id === state.recording?.meetingId && !sessionFormDirty) {
+        fillSessionForm(msg.meeting);
+      }
+    } else if (msg.type === "SETTINGS_UPDATED") {
+      // Changed on the dashboard (or in another window)
+      chrome.runtime.sendMessage({ type: "SETTINGS_CHANGED", settings: msg.settings }).then((r) => applySettings(r?.settings)).catch(() => {});
+      applyConfig(msg.settings);
+    } else if (msg.type === "NOTES_UPDATED" && msg.meeting_id === notesMeetingId && msg.source !== "extension" && !notesDirty) {
+      $("notes").value = msg.raw_notes || "";
+      $("notes-status").textContent = "Updated from dashboard";
     }
   };
   ws.onclose = () => setTimeout(connectLive, 3000);
@@ -223,7 +242,7 @@ async function saveNotes() {
     await fetch(`${BACKEND}/api/meetings/${notesMeetingId}/notes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ raw_notes: $("notes").value }),
+      body: JSON.stringify({ raw_notes: $("notes").value, source: "extension" }),
     });
     $("notes-status").textContent = "Saved";
   } catch (e) {
@@ -234,7 +253,6 @@ async function saveNotes() {
 // ----------------- Events -----------------
 function bindEvents() {
   $("start-btn").addEventListener("click", () => startRecording());
-  $("record-tab-btn").addEventListener("click", () => startRecording());
 
   $("stop-btn").addEventListener("click", async () => {
     $("stop-btn").disabled = true;
@@ -255,8 +273,22 @@ function bindEvents() {
     }).then(scheduleSessionsReload).catch(() => {});
   });
 
-  $("auto-record").addEventListener("change", (e) => {
-    chrome.runtime.sendMessage({ type: "UPDATE_SETTINGS", settings: { autoRecord: e.target.checked } });
+
+  // Session settings view
+  $("settings-btn").addEventListener("click", () => showView($("settings-view").hidden ? "settings" : "main"));
+  $("settings-back").addEventListener("click", () => showView("main"));
+  for (const id of ["sf-title", "sf-agenda", "sf-attendees"]) {
+    $(id).addEventListener("input", () => {
+      sessionFormDirty = true;
+      $("session-form-status").textContent = "Unsaved";
+    });
+  }
+  $("sf-save").addEventListener("click", saveSessionForm);
+  document.querySelectorAll("[data-setting]").forEach((el) => {
+    el.addEventListener("change", () => updateSetting(el.dataset.setting, el.checked));
+  });
+  document.querySelectorAll("[data-config]").forEach((el) => {
+    el.addEventListener("change", () => saveConfig(el.dataset.config, el.value.trim()));
   });
 
   $("alert-close").addEventListener("click", () => chrome.runtime.sendMessage({ type: "CLEAR_ERROR" }));
@@ -273,7 +305,7 @@ function bindEvents() {
 }
 
 async function startRecording() {
-  const buttons = [$("start-btn"), $("record-tab-btn")];
+  const buttons = [$("start-btn")];
   buttons.forEach((b) => (b.disabled = true));
   await refreshActiveTab();
   const res = await chrome.runtime.sendMessage({ type: "START_RECORDING", tabId: activeTabId, source: "panel" })
@@ -318,6 +350,134 @@ function addMsg(text, cls) {
   return el;
 }
 
+// ----------------- Session settings -----------------
+async function showView(view) {
+  const settingsOpen = view === "settings";
+  $("settings-view").hidden = !settingsOpen;
+  $("main-view").hidden = settingsOpen;
+  $("settings-btn").classList.toggle("active", settingsOpen);
+  await chrome.storage.session.remove("openView").catch(() => {});
+  if (settingsOpen) {
+    sessionFormDirty = false;
+    fillSessionForm();
+    loadConfig();
+  }
+}
+
+// The form edits the live session while recording, otherwise it queues details for the next one
+async function fillSessionForm(meeting) {
+  const rec = state.recording;
+  const pending = state.pendingSession;
+  $("session-form-title").textContent = rec ? "Current session" : "Next session";
+  $("session-form-hint").textContent = rec
+    ? `Editing “${rec.title}” — changes show up on the dashboard right away.`
+    : "Applies to the next meeting you record. Leave blank to use the meeting's own title.";
+  $("session-form-status").textContent = "";
+  if (rec) {
+    if (!meeting) {
+      try {
+        meeting = await (await fetch(`${BACKEND}/api/meetings/${rec.meetingId}`)).json();
+      } catch (e) {
+        meeting = { title: rec.title };
+      }
+    }
+    if (sessionFormDirty) return;
+    $("sf-title").value = meeting.title || rec.title || "";
+    $("sf-agenda").value = meeting.agenda || "";
+    $("sf-attendees").value = (meeting.attendees || []).join(", ");
+  } else {
+    $("sf-title").value = pending?.title || "";
+    $("sf-agenda").value = pending?.agenda || "";
+    $("sf-attendees").value = (pending?.attendees || []).join(", ");
+  }
+}
+
+async function saveSessionForm() {
+  const btn = $("sf-save");
+  btn.disabled = true;
+  const res = await chrome.runtime.sendMessage({
+    type: "SET_SESSION_DETAILS",
+    details: {
+      title: $("sf-title").value,
+      agenda: $("sf-agenda").value,
+      attendees: $("sf-attendees").value.split(","),
+    },
+  }).catch((e) => ({ ok: false, error: e.message }));
+  btn.disabled = false;
+  if (res?.ok) {
+    sessionFormDirty = false;
+    $("session-form-status").textContent = res.applied === "current" ? "Saved to this session" : "Saved for next session";
+    scheduleSessionsReload();
+  } else {
+    $("session-form-status").textContent = res?.error || "Not saved";
+  }
+}
+
+function applySettings(next) {
+  if (!next) return;
+  settings = next;
+  document.querySelectorAll("[data-setting]").forEach((el) => {
+    el.checked = Boolean(settings[el.dataset.setting]);
+  });
+}
+
+async function updateSetting(key, value) {
+  const res = await chrome.runtime.sendMessage({ type: "UPDATE_SETTINGS", settings: { [key]: value } }).catch(() => null);
+  applySettings(res?.settings);
+}
+
+function applyConfig(next) {
+  if (!next) return;
+  config = { ...config, ...next };
+  document.querySelectorAll("[data-config]").forEach((el) => {
+    const v = config[el.dataset.config];
+    if (v === undefined || document.activeElement === el) return;
+    if (el.tagName === "SELECT" && v && ![...el.options].some((o) => o.value === v)) {
+      el.add(new Option(v, v));
+    }
+    el.value = v;
+  });
+}
+
+async function loadConfig() {
+  try {
+    const [cfg, whisper, llm] = await Promise.all([
+      fetch(`${BACKEND}/api/settings`).then((r) => r.json()),
+      fetch(`${BACKEND}/api/models/whisper`).then((r) => r.json()).catch(() => ({ models: [] })),
+      fetch(`${BACKEND}/api/settings/models`).then((r) => r.json()).catch(() => ({ models: [] })),
+    ]);
+    const ready = (whisper.models || []).filter((m) => m.ready || m.downloaded);
+    $("cfg-whisper").innerHTML = ready.length
+      ? ready.map((m) => `<option value="${m.id}">${escapeHtml(m.name)}</option>`).join("")
+      : '<option value="">No Whisper model downloaded</option>';
+    const llms = (llm.models || []).filter((m) => !/embed/i.test(m));
+    $("cfg-llm").innerHTML = llms.length
+      ? llms.map((m) => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join("")
+      : `<option value="${escapeHtml(cfg.lm_studio_model || "")}">${escapeHtml(cfg.lm_studio_model || "LM Studio offline")}</option>`;
+    $("ai-status").textContent = llm.online ? "LM Studio connected" : "LM Studio offline";
+    config = {};
+    applyConfig(cfg);
+    applySettings(await chrome.runtime.sendMessage({ type: "SETTINGS_CHANGED", settings: cfg }).then((r) => r?.settings).catch(() => null));
+  } catch (e) {
+    $("ai-status").textContent = "Backend offline";
+  }
+}
+
+async function saveConfig(key, value) {
+  if (!value) return;
+  try {
+    const res = await fetch(`${BACKEND}/api/settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [key]: value }),
+    });
+    applyConfig(await res.json());
+    $("ai-status").textContent = "Saved";
+  } catch (e) {
+    $("ai-status").textContent = "Backend offline — not saved";
+  }
+}
+
 // ----------------- Utils -----------------
 function fmtDuration(totalSeconds) {
   const s = Math.max(0, Math.floor(totalSeconds));
@@ -330,10 +490,6 @@ function fmtDuration(totalSeconds) {
 function fmtDate(iso) {
   if (!iso) return "";
   return new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-}
-
-function platformName(p) {
-  return { meet: "Google Meet", zoom: "Zoom", teams: "Teams" }[p] || "Meeting";
 }
 
 function escapeHtml(str) {

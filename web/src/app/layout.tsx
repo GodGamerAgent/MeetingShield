@@ -5,11 +5,11 @@ import TopNavbar from "@/components/TopNavbar";
 import ScrollRevealProvider from "@/components/ScrollRevealProvider";
 
 export const metadata: Metadata = {
-  title: "AURA-MEET | On-Device Smart Meeting Intelligence & Behavioral Copilot",
-  description: "On-Device Smart Meeting Intelligence, Granola-style Note Taking, and Behavioral Response Copilot powered by Gemma 4",
+  title: "Quorum — private meeting notes",
+  description: "Record a meeting, get the transcript, decisions and owners — on your own machine with Whisper and Gemma 4.",
   openGraph: {
-    title: "AURA-MEET | On-Device Smart Meeting Intelligence & Behavioral Copilot",
-    description: "On-Device Smart Meeting Intelligence, Granola-style Note Taking, and Behavioral Response Copilot powered by Gemma 4",
+    title: "Quorum — private meeting notes",
+    description: "Record a meeting, get the transcript, decisions and owners — on your own machine with Whisper and Gemma 4.",
   },
 };
 
@@ -20,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased text-aura-charcoal selection:bg-aura-peach selection:text-white">
+      <body className="antialiased text-brand-charcoal selection:bg-brand-peach selection:text-white">
         <div className="min-h-screen flex">
           {/* Floating Sidebar */}
           <Sidebar />

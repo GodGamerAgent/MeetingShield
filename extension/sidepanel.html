@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AURA-MEET Copilot</title>
+  <title>Quorum</title>
   <link rel="stylesheet" href="sidepanel.css">
 </head>
 <body>
@@ -12,13 +12,18 @@
       <div class="brand">
         <div class="brand-orb"></div>
         <div>
-          <h1 class="brand-title">AURA-MEET</h1>
-          <p class="brand-subtitle">On-device meeting copilot</p>
+          <h1 class="brand-title">Quorum</h1>
+          <p class="brand-subtitle">Private meeting notes</p>
         </div>
       </div>
-      <div class="status" id="backend-status" title="Backend / LM Studio status">
-        <span class="status-dot"></span>
-        <span class="status-text">Connecting…</span>
+      <div class="header-right">
+        <div class="status" id="backend-status" title="Backend / LM Studio status">
+          <span class="status-dot"></span>
+          <span class="status-text">Connecting…</span>
+        </div>
+        <button class="icon-btn" id="settings-btn" title="Session settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
       </div>
     </header>
 
@@ -27,22 +32,15 @@
       <button class="alert-close" id="alert-close" title="Dismiss">&times;</button>
     </div>
 
+    <div id="main-view" class="view">
     <!-- Current meeting -->
     <section class="card now-card" id="now-card">
       <!-- idle -->
       <div class="now-state" data-state="idle">
-        <div class="now-icon">🎧</div>
-        <h2 class="now-title">Waiting for a meeting</h2>
-        <p class="muted">Join a Google Meet, Zoom (web) or Teams call. AURA detects it and records it as its own session.</p>
-        <button class="btn btn-ghost" id="record-tab-btn">Record this tab anyway</button>
-      </div>
-
-      <!-- detected -->
-      <div class="now-state" data-state="detected">
-        <span class="eyebrow"><span class="dot dot-coral"></span><span id="detected-platform">Meeting</span> detected</span>
-        <h2 class="now-title" id="detected-title">Meeting</h2>
-        <button class="btn btn-primary btn-block" id="start-btn">● Start recording</button>
-        <p class="muted small">Shortcut: <kbd>⌥</kbd><kbd>⇧</kbd><kbd>R</kbd> · stops automatically when you leave the call.</p>
+        <h2 class="now-title">Ready to record</h2>
+        <p class="muted" id="idle-tab-hint">Open your meeting tab, then start recording. Your mic and the tab's audio are saved as one private session.</p>
+        <button class="btn btn-primary btn-block" id="start-btn">● Start recording this tab</button>
+        <p class="muted small">Shortcut <kbd>⌥</kbd><kbd>⇧</kbd><kbd>R</kbd> · or right-click the Quorum icon</p>
       </div>
 
       <!-- recording -->
@@ -65,10 +63,6 @@
         <button class="btn btn-dark btn-block" id="stop-btn">■ Stop & process</button>
       </div>
 
-      <label class="toggle">
-        <input type="checkbox" id="auto-record">
-        <span>Record automatically when I join a call</span>
-      </label>
     </section>
 
     <!-- Notes for the current / latest session -->
@@ -85,7 +79,7 @@
     <section class="card">
       <div class="card-header">
         <h2 class="card-title">Sessions</h2>
-        <a class="link small" href="http://localhost:3000/meetings" target="_blank">All →</a>
+        <a class="link small" href="http://localhost:3001/meetings" target="_blank">All →</a>
       </div>
       <ul class="sessions" id="sessions">
         <li class="muted small empty">No sessions yet.</li>
@@ -107,8 +101,82 @@
       </div>
     </section>
 
+    </div>
+
+    <!-- Session settings (gear button, or right-click the toolbar icon → Session settings…) -->
+    <div id="settings-view" class="view" hidden>
+      <div class="view-header">
+        <button class="link-btn" id="settings-back">← Back</button>
+        <h2 class="view-title">Session settings</h2>
+      </div>
+
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title" id="session-form-title">Next session</h2>
+          <span class="muted small" id="session-form-status"></span>
+        </div>
+        <p class="muted small" id="session-form-hint">Applies to the next meeting you record.</p>
+        <label class="field">
+          <span>Title</span>
+          <input type="text" id="sf-title" placeholder="Use the meeting's own title">
+        </label>
+        <label class="field">
+          <span>Agenda / goal</span>
+          <textarea id="sf-agenda" rows="2" placeholder="Helps the summary focus on what matters"></textarea>
+        </label>
+        <label class="field">
+          <span>Attendees</span>
+          <input type="text" id="sf-attendees" placeholder="Comma separated — one name labels “Others” with it">
+        </label>
+        <button class="btn btn-primary btn-block" id="sf-save">Save session details</button>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">Recording</h2>
+          <span class="muted small">Synced with dashboard</span>
+        </div>
+        <label class="toggle-row"><input type="checkbox" data-setting="autoProcess"><span>Transcribe &amp; summarize when I stop recording</span></label>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">Transcription &amp; AI</h2>
+          <span class="muted small" id="ai-status"></span>
+        </div>
+        <label class="field">
+          <span>Your name (labels your lines)</span>
+          <input type="text" id="cfg-user-name" data-config="user_name">
+        </label>
+        <label class="field">
+          <span>Whisper model</span>
+          <select id="cfg-whisper" data-config="whisper_model"></select>
+        </label>
+        <label class="field">
+          <span>Meeting language</span>
+          <select id="cfg-language" data-config="whisper_language">
+            <option value="auto">Auto-detect</option>
+            <option value="en">English</option>
+            <option value="hi">Hindi</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="pt">Portuguese</option>
+            <option value="ja">Japanese</option>
+            <option value="zh">Chinese</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Summary model (LM Studio)</span>
+          <select id="cfg-llm" data-config="lm_studio_model"></select>
+        </label>
+      </section>
+
+      <a class="link small center" href="http://localhost:3001/settings" target="_blank">All settings in the dashboard →</a>
+    </div>
+
     <footer class="footer">
-      <a href="http://localhost:3000" target="_blank" class="link">Open dashboard →</a>
+      <a href="http://localhost:3001" target="_blank" class="link">Open dashboard →</a>
     </footer>
   </div>
 

@@ -196,8 +196,8 @@ export default function NotesMarkdownModal({
         .getMeetingMarkdown(meetingId)
         .then((res) => {
           setMarkdown(res.content || "");
-          setFilePath(res.file_path || `/tmp/aura-recordings/${meetingId}/meeting_notes.md`);
-          setFolderPath(res.folder_path || `/tmp/aura-recordings/${meetingId}`);
+          setFilePath(res.file_path || `/tmp/quorum-recordings/${meetingId}/meeting_notes.md`);
+          setFolderPath(res.folder_path || `/tmp/quorum-recordings/${meetingId}`);
         })
         .catch((err) => {
           console.warn("Failed to load markdown:", err);
@@ -937,7 +937,7 @@ export default function NotesMarkdownModal({
                 </span>
               </div>
               <p className="text-[11px] font-mono text-[#5C4E58] truncate mt-0.5">
-                {filePath || `/tmp/aura-recordings/${meetingId}/meeting_notes.md`}
+                {filePath || `/tmp/quorum-recordings/${meetingId}/meeting_notes.md`}
               </p>
             </div>
           </div>
@@ -1203,7 +1203,7 @@ export default function NotesMarkdownModal({
               <FolderOpen className="w-3.5 h-3.5 text-[#FF7F50]" />
               Session Folder:{" "}
               <code className="font-mono bg-white px-2 py-0.5 rounded border border-[#FFD8C7] text-[#2B2129]">
-                {folderPath || `/tmp/aura-recordings/${meetingId}`}
+                {folderPath || `/tmp/quorum-recordings/${meetingId}`}
               </code>
             </span>
             <span className="hidden md:inline text-[11px]">

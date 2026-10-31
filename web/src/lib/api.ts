@@ -1,5 +1,9 @@
+// REST goes through the Next.js /api proxy to the FastAPI backend (same data the extension uses).
 export const API_BASE = "";
-export const WS_BASE = "";
+// Live events come straight from the backend's WebSocket.
+export const WS_BASE =
+  process.env.NEXT_PUBLIC_QUORUM_WS_URL ||
+  (typeof window !== "undefined" ? `ws://${window.location.hostname}:8000` : "");
 
 
 export interface Meeting {
@@ -82,17 +86,6 @@ export interface WhisperModelInfo {
   downloaded?: boolean;
   recommended: boolean;
   local_path?: string;
-}
-
-export interface DetectedCallInfo {
-  id: string;
-  platform: "meet" | "zoom" | "teams";
-  title: string;
-  meeting_url: string;
-  attendees: string[];
-  detected_at: string;
-  in_call: boolean;
-  recording_meeting_id?: string | null;
 }
 
 export interface DominanceData {
@@ -372,7 +365,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/api/meetings/${meetingId}/notes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ raw_notes: rawNotes })
+      body: JSON.stringify({ raw_notes: rawNotes, source: "web" })
     });
     return res.json();
   },
@@ -380,7 +373,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/api/meetings/${meetingId}/enhance-notes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ raw_notes: rawNotes })
+      body: JSON.stringify({ raw_notes: rawNotes, source: "web" })
     });
     return res.json();
   },
@@ -429,34 +422,8 @@ export const api = {
     const res = await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(query)}`, { cache: "no-store" });
     return res.json();
   },
-  async getDetectionStatus(): Promise<{
-    auto_detect_enabled: boolean;
-    auto_record_enabled: boolean;
-    detected_calls: DetectedCallInfo[];
-    storage_stats: { directory: string; total_files: number; session_folders: string[] };
-  }> {
-    const res = await fetch(`${API_BASE}/api/detection/status`, { cache: "no-store" });
-    return res.json();
-  },
-  async simulateMeetingDetection(data?: {
-    platform?: "meet" | "zoom" | "teams";
-    title?: string;
-    attendees?: string[];
-    auto_start_recording?: boolean;
-  }) {
-    const res = await fetch(`${API_BASE}/api/detection/simulate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data || {})
-    });
-    return res.json();
-  },
-  async updateDetectionSettings(data: { auto_detect_enabled?: boolean; auto_record_enabled?: boolean }) {
-    const res = await fetch(`${API_BASE}/api/detection/settings`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data)
-    });
+  async getStorageStats(): Promise<{ directory: string; total_files: number; session_folders: string[] }> {
+    const res = await fetch(`${API_BASE}/api/storage`, { cache: "no-store" });
     return res.json();
   },
   async restoreDemoSessions() {

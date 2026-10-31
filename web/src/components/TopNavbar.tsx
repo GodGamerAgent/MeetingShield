@@ -8,7 +8,7 @@ import SessionSwitcher from "@/components/SessionSwitcher";
 import GlobalSearchModal from "@/components/GlobalSearchModal";
 import OnboardingTourModal from "@/components/OnboardingTourModal";
 
-const TOUR_STORAGE_KEY = "aura_tour_seen_v1";
+const TOUR_STORAGE_KEY = "quorum_tour_seen_v1";
 
 export default function TopNavbar() {
   const [status, setStatus] = useState<any>(null);
@@ -72,14 +72,14 @@ export default function TopNavbar() {
 
   return (
     <>
-      <header className="sticky top-4 z-30 mb-6 flex flex-wrap items-center justify-between gap-3 px-5 py-3 rounded-2xl bg-white/90 backdrop-blur-md border border-aura-pastel/80 card-3d">
+      <header className="sticky top-4 z-30 mb-6 flex flex-wrap items-center justify-between gap-3 px-5 py-3 rounded-2xl bg-white/90 backdrop-blur-md border border-brand-pastel/80 card-3d">
         {/* Left: Mobile Title & Session Switcher */}
         <div className="flex items-center gap-3">
           <Link href="/" className="lg:hidden flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-aura-peach to-aura-coral flex items-center justify-center text-white text-xs font-bold">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-brand-peach to-brand-coral flex items-center justify-center text-white text-xs font-bold">
               A
             </div>
-            <span className="font-extrabold text-sm text-aura-charcoal">AURA</span>
+            <span className="font-extrabold text-sm text-brand-charcoal">Quorum</span>
           </Link>
 
           {/* Global Session Switcher */}
@@ -89,11 +89,11 @@ export default function TopNavbar() {
         {/* Center: Global Omnisearch Trigger */}
         <button
           onClick={() => setIsSearchOpen(true)}
-          className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-aura-pastel/80 bg-aura-mist/40 hover:bg-white text-xs text-aura-slate hover:text-aura-charcoal btn-3d-light w-full max-w-xs sm:w-64 order-last sm:order-none"
+          className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-brand-pastel/80 bg-brand-mist/40 hover:bg-white text-xs text-brand-slate hover:text-brand-charcoal btn-3d-light w-full max-w-xs sm:w-64 order-last sm:order-none"
         >
-          <Search className="w-3.5 h-3.5 text-aura-coral flex-shrink-0" />
+          <Search className="w-3.5 h-3.5 text-brand-coral flex-shrink-0" />
           <span className="flex-1 text-left truncate font-normal">Search all meetings...</span>
-          <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[9px] font-mono font-bold bg-white text-aura-slate rounded border border-aura-pastel shadow-xs">
+          <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[9px] font-mono font-bold bg-white text-brand-slate rounded border border-brand-pastel shadow-xs">
             ⌘K
           </kbd>
         </button>
@@ -103,8 +103,8 @@ export default function TopNavbar() {
           <button
             type="button"
             onClick={() => setIsTourOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-aura-pastel bg-aura-mist/70 hover:bg-aura-mist text-xs font-bold text-aura-coral btn-3d-light"
-            title="Open the interactive AURA-MEET website tour"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-brand-pastel bg-brand-mist/70 hover:bg-brand-mist text-xs font-bold text-brand-coral btn-3d-light"
+            title="Open the interactive Quorum website tour"
           >
             <Compass className="w-3.5 h-3.5" />
             <span>Website Tour</span>
@@ -115,11 +115,11 @@ export default function TopNavbar() {
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs btn-3d-light ${
               isLMOnline
                 ? "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
-                : "bg-aura-mist text-aura-charcoal border-aura-pastel hover:border-aura-peach"
+                : "bg-brand-mist text-brand-charcoal border-brand-pastel hover:border-brand-peach"
             }`}
             title="Configure LM Studio and Gemma 4 routing in Settings"
           >
-            <Cpu className={`w-3.5 h-3.5 ${isLMOnline ? "text-emerald-600" : "text-aura-coral"}`} />
+            <Cpu className={`w-3.5 h-3.5 ${isLMOnline ? "text-emerald-600" : "text-brand-coral"}`} />
             <span className="font-semibold hidden sm:inline">
               {isLMOnline ? `Connected: ${activeModel}` : "Local Intelligence Mode"}
             </span>

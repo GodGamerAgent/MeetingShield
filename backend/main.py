@@ -6,6 +6,8 @@ import os
 import shutil
 import time
 import re
+import subprocess
+import sys
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 
@@ -15,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from config_store import config_store
-from database import init_db, get_db, clear_all_data
+from database import init_db, get_db, clear_all_data, seed_initial_data
 from audio_pipeline import audio_pipeline
 from context_manager import context_manager
 from intelligence_engine import intelligence_engine
@@ -24,8 +26,8 @@ from calendar_service import calendar_service
 from markdown_exporter import generate_meeting_markdown, save_meeting_markdown_file, get_meeting_markdown_path
 
 app = FastAPI(
-    title="AURA-MEET Engine",
-    description="On-Device Smart Meeting Intelligence & Behavioral Copilot API",
+    title="Quorum API",
+    description="Private, on-device meeting notes: recording, Whisper transcription and Gemma 4 summaries",
     version="1.0.0"
 )
 
@@ -47,7 +49,7 @@ async def on_startup():
     conn.execute("UPDATE meetings SET status = 'recorded' WHERE status IN ('processing', 'recording', 'active')")
     conn.commit()
     conn.close()
-    print("[AuraMeet] Backend started, SQLite schema ready.")
+    print("[Quorum] Backend started, SQLite schema ready.")
     loop = asyncio.get_event_loop()
     loop.run_in_executor(None, _prewarm_whisper)
 
@@ -55,7 +57,7 @@ def _prewarm_whisper():
     try:
         audio_pipeline._get_whisper_model()
     except Exception as e:
-        print(f"[AuraMeet] Whisper pre-warm notice: {e}")
+        print(f"[Quorum] Whisper pre-warm notice: {e}")
 
 # Connection Manager for /ws/live
 class LiveConnectionHub:
@@ -89,7 +91,7 @@ class MeetingCreateReq(BaseModel):
     status: Optional[str] = "recording"
 
 class FinishMeetingReq(BaseModel):
-    auto_process: bool = True
+    auto_process: Optional[bool] = None  # None = use the shared "auto process" setting
     raw_notes: Optional[str] = None
 
 class MeetingUpdateReq(BaseModel):
@@ -131,12 +133,21 @@ class SettingsUpdateReq(BaseModel):
     audio_export_dir: Optional[str] = None
     whisper_model: Optional[str] = None
     whisper_language: Optional[str] = None
+    auto_process_enabled: Optional[bool] = None
 
 class NotesUpdateReq(BaseModel):
     notes: str
 
 class RawNotesReq(BaseModel):
     raw_notes: str
+    source: Optional[str] = None  # "web" | "extension" — lets clients ignore their own echo
+
+class MarkdownSaveReq(BaseModel):
+    content: str
+
+class RevealReq(BaseModel):
+    os: Optional[str] = None
+
 
 class ProcessMeetingReq(BaseModel):
     model_name: Optional[str] = "large-v3-turbo"
@@ -159,10 +170,26 @@ def get_settings():
     return config_store.get().model_dump()
 
 @app.post("/api/settings")
-def update_settings(req: SettingsUpdateReq):
+async def update_settings(req: SettingsUpdateReq):
     updates = {k: v for k, v in req.model_dump().items() if v is not None}
-    new_cfg = config_store.update(updates)
-    return new_cfg.model_dump()
+    new_cfg = config_store.update(updates).model_dump()
+    await live_hub.broadcast({"type": "SETTINGS_UPDATED", "settings": new_cfg})
+    return new_cfg
+
+def _storage_stats() -> Dict[str, Any]:
+    root = config_store.get().audio_export_dir
+    folders, total = [], 0
+    if os.path.isdir(root):
+        for entry in sorted(os.listdir(root)):
+            full = os.path.join(root, entry)
+            if os.path.isdir(full):
+                folders.append(entry)
+                total += len([f for f in os.listdir(full) if not f.startswith(".")])
+    return {"directory": root, "total_files": total, "session_folders": folders}
+
+@app.get("/api/storage")
+def storage_stats():
+    return _storage_stats()
 
 @app.get("/api/settings/models")
 async def list_available_models():
@@ -186,7 +213,7 @@ def list_meetings():
     return meetings
 
 @app.post("/api/meetings")
-def create_meeting(req: MeetingCreateReq):
+async def create_meeting(req: MeetingCreateReq):
     meeting_id = f"meet-{uuid.uuid4().hex[:8]}"
     now_iso = datetime.now(timezone.utc).isoformat()
     status = req.status if req.status in ("recording", "recorded", "scheduled") else "recording"
@@ -198,7 +225,9 @@ def create_meeting(req: MeetingCreateReq):
           now_iso, status, req.platform or "", req.meeting_url or ""))
     conn.commit()
     conn.close()
-    return get_meeting(meeting_id)
+    meeting = get_meeting(meeting_id)
+    await live_hub.broadcast({"type": "MEETING_CREATED", "meeting_id": meeting_id, "meeting": meeting})
+    return meeting
 
 @app.get("/api/meetings/{meeting_id}")
 def get_meeting(meeting_id: str):
@@ -222,7 +251,7 @@ def get_meeting(meeting_id: str):
     return m
 
 @app.patch("/api/meetings/{meeting_id}")
-def update_meeting(meeting_id: str, req: MeetingUpdateReq):
+async def update_meeting(meeting_id: str, req: MeetingUpdateReq):
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM meetings WHERE id = ?", (meeting_id,))
@@ -253,14 +282,16 @@ def update_meeting(meeting_id: str, req: MeetingUpdateReq):
     conn.close()
 
     try:
-        generate_and_save_meeting_markdown(meeting_id)
+        save_meeting_markdown_file(meeting_id)
     except Exception:
         pass
 
-    return get_meeting(meeting_id)
+    meeting = get_meeting(meeting_id)
+    await live_hub.broadcast({"type": "MEETING_UPDATED", "meeting_id": meeting_id, "meeting": meeting})
+    return meeting
 
 @app.delete("/api/meetings/{meeting_id}")
-def delete_meeting(meeting_id: str):
+async def delete_meeting(meeting_id: str):
     conn = get_db()
     cur = conn.cursor()
     cur.execute("DELETE FROM meetings WHERE id = ?", (meeting_id,))
@@ -296,6 +327,14 @@ def delete_meeting(meeting_id: str):
         except Exception:
             pass
 
+    deleted_meetings.add(meeting_id)
+    ws = audio_sockets.get(meeting_id)
+    if ws is not None:  # deleted while recording: tell the extension to drop it
+        try:
+            await ws.send_json({"status": "DELETED", "meeting_id": meeting_id})
+        except Exception:
+            pass
+    await live_hub.broadcast({"type": "MEETING_DELETED", "meeting_id": meeting_id})
     return {"deleted": True, "id": meeting_id, "files_deleted": True}
 
 # ----------------- Audio File Download & Info -----------------
@@ -361,7 +400,7 @@ def get_meeting_notes(meeting_id: str):
     }
 
 @app.post("/api/meetings/{meeting_id}/notes")
-def save_raw_notes(meeting_id: str, req: RawNotesReq):
+async def save_raw_notes(meeting_id: str, req: RawNotesReq):
     conn = get_db()
     cur = conn.cursor()
     cur.execute("UPDATE meetings SET raw_notes = ? WHERE id = ?", (req.raw_notes, meeting_id))
@@ -371,11 +410,15 @@ def save_raw_notes(meeting_id: str, req: RawNotesReq):
         save_meeting_markdown_file(meeting_id)
     except Exception:
         pass
+    await live_hub.broadcast({"type": "NOTES_UPDATED", "meeting_id": meeting_id, "raw_notes": req.raw_notes, "source": req.source})
     return {"status": "SUCCESS", "meeting_id": meeting_id, "raw_notes": req.raw_notes}
 
 @app.post("/api/meetings/{meeting_id}/enhance-notes")
 async def enhance_notes_endpoint(meeting_id: str, req: RawNotesReq):
-    return await intelligence_engine.enhance_user_notes(meeting_id, req.raw_notes)
+    result = await intelligence_engine.enhance_user_notes(meeting_id, req.raw_notes)
+    await live_hub.broadcast({"type": "NOTES_UPDATED", "meeting_id": meeting_id, "raw_notes": req.raw_notes,
+                              "enhanced_notes": result.get("enhanced_notes", ""), "source": req.source})
+    return result
 
 @app.get("/api/meetings/{meeting_id}/markdown")
 def get_meeting_markdown(meeting_id: str):
@@ -388,6 +431,40 @@ def get_meeting_markdown(meeting_id: str):
         "file_path": filepath,
         "folder_path": meeting_dir
     }
+
+@app.post("/api/meetings/{meeting_id}/markdown")
+def save_meeting_markdown(meeting_id: str, req: MarkdownSaveReq):
+    """Save hand-edited markdown to the session folder."""
+    get_meeting(meeting_id)
+    filepath = os.path.join(audio_pipeline.get_meeting_dir(meeting_id), "meeting_notes.md")
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(req.content)
+    return {"status": "saved", "meeting_id": meeting_id, "file_path": filepath}
+
+@app.post("/api/meetings/{meeting_id}/reveal-in-folder")
+def reveal_in_folder(meeting_id: str, req: Optional[RevealReq] = None):
+    get_meeting(meeting_id)
+    folder = audio_pipeline.get_meeting_dir(meeting_id)
+    md = get_meeting_markdown_path(meeting_id) or save_meeting_markdown_file(meeting_id)
+    if sys.platform == "darwin":
+        os_name, manager, cmd = "mac", "Finder", ["open", "-R", md]
+    elif sys.platform.startswith("win"):
+        os_name, manager, cmd = "win", "File Explorer", ["explorer", "/select,", md]
+    else:
+        os_name, manager, cmd = "linux", "File Manager", ["xdg-open", folder]
+    try:
+        subprocess.Popen(cmd)
+        status, message = "opened", f"Opened the session folder in {manager}."
+    except Exception as e:
+        status, message = "error", f"Could not open {manager}: {e}"
+    return {"status": status, "os": os_name, "file_manager_name": manager, "button_label": f"Show in {manager}",
+            "command": " ".join(cmd), "file_path": md, "folder_path": folder, "message": message}
+
+@app.post("/api/meetings/restore-demo")
+async def restore_demo_sessions():
+    seed_initial_data()
+    await live_hub.broadcast({"type": "MEETING_CREATED", "meeting_id": "demo-meeting-01"})
+    return {"status": "restored"}
 
 @app.get("/api/meetings/{meeting_id}/download-markdown")
 def download_meeting_markdown(meeting_id: str):
@@ -723,7 +800,8 @@ async def finish_meeting(meeting_id: str, req: Optional[FinishMeetingReq] = None
     await live_hub.broadcast({"type": "RECORDING_STOPPED", "meeting_id": meeting_id, "duration_sec": duration})
 
     already = meeting_processing_state.get(meeting_id, {}).get("status") == "processing"
-    if req.auto_process and duration >= 2.0 and not already:
+    auto_process = config_store.get().auto_process_enabled if req.auto_process is None else req.auto_process
+    if auto_process and duration >= 2.0 and not already:
         asyncio.create_task(run_meeting_processing(meeting_id))
         return {"status": "processing", "meeting_id": meeting_id, "duration_sec": duration}
     return {"status": "recorded", "meeting_id": meeting_id, "duration_sec": duration}
@@ -819,15 +897,13 @@ async def download_whisper_model(req: WhisperDownloadReq):
     os.makedirs(models_dir, exist_ok=True)
     loop = asyncio.get_event_loop()
     def _do_download():
-        try:
-            from faster_whisper import WhisperModel
-            WhisperModel(model_id, device="cpu", compute_type="int8", download_root=os.path.join(os.path.dirname(__file__), "models"))
-        except Exception:
-            pass
-        marker = os.path.join(models_dir, ".downloaded")
-        with open(marker, "w", encoding="utf-8") as f:
-            f.write(datetime.now(timezone.utc).isoformat())
-    await loop.run_in_executor(None, _do_download)
+        from faster_whisper import download_model
+        download_model(model_id, output_dir=models_dir)  # writes model.bin where the loader looks
+    try:
+        await loop.run_in_executor(None, _do_download)
+    except Exception as e:
+        shutil.rmtree(models_dir, ignore_errors=True)
+        raise HTTPException(status_code=502, detail=f"Download failed: {e}")
     return {
         "status": "downloaded",
         "model_id": model_id,
@@ -954,6 +1030,7 @@ async def websocket_live_endpoint(websocket: WebSocket):
 # Recording sessions currently streaming audio, keyed by meeting id
 active_recordings: Dict[str, Dict[str, Any]] = {}
 audio_sockets: Dict[str, WebSocket] = {}
+deleted_meetings: set = set()  # late audio for these is dropped instead of recreating the folder
 
 @app.websocket("/ws/audio")
 async def websocket_audio_endpoint(websocket: WebSocket):
@@ -978,7 +1055,7 @@ async def websocket_audio_endpoint(websocket: WebSocket):
                 break
 
             if message.get("bytes") is not None:
-                if not meeting_id:
+                if not meeting_id or meeting_id in deleted_meetings:
                     continue
                 levels = audio_pipeline.append_pcm(meeting_id, message["bytes"], channels, sample_rate)
                 rec = active_recordings.setdefault(meeting_id, {"meeting_id": meeting_id, "seconds": 0.0})
@@ -1030,8 +1107,9 @@ async def websocket_audio_endpoint(websocket: WebSocket):
 
 # ----------------- Clear All Sessions -----------------
 @app.post("/api/meetings/clear-all")
-def clear_all_endpoint():
+async def clear_all_endpoint():
     clear_all_data()
+    await live_hub.broadcast({"type": "SESSIONS_CLEARED"})
     return {"status": "SUCCESS", "message": "All sessions cleared."}
 
 if __name__ == "__main__":

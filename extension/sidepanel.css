@@ -1,4 +1,4 @@
-/* AURA-MEET Side Panel — Warm Peach & Alabaster */
+/* Quorum side panel */
 
 :root {
   --bg: #FFFDFB;
@@ -174,3 +174,30 @@ textarea:focus, select:focus, #chat-input:focus { outline: none; border-color: v
 .footer { text-align: center; padding: 4px 0 8px; font-size: 11.5px; }
 
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* Header actions & views */
+.header-right { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.header-right .status { max-width: none; }
+.icon-btn {
+  display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex-shrink: 0;
+  border-radius: 8px; border: 1px solid var(--pastel); background: var(--surface); color: var(--muted); cursor: pointer;
+}
+.icon-btn:hover, .icon-btn.active { color: var(--coral); background: var(--mist); }
+.view { display: flex; flex-direction: column; gap: 12px; }
+.view[hidden] { display: none; }
+.view-header { display: flex; align-items: center; gap: 10px; }
+.view-title { font-size: 14px; font-weight: 800; }
+.link-btn { border: none; background: none; color: var(--coral); font-weight: 700; font-size: 12px; cursor: pointer; padding: 0; }
+
+/* Forms */
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 10.5px; font-weight: 600; color: var(--muted); }
+.field input[type="text"] {
+  width: 100%; border: 1px solid var(--pastel); border-radius: 9px; padding: 7px 9px;
+  font: inherit; font-size: 12px; font-weight: 500; color: var(--text); background: var(--surface);
+}
+.field input[type="text"]:focus { outline: none; border-color: var(--coral); }
+.field textarea { min-height: 48px; font-weight: 500; }
+.field select { font-weight: 500; }
+.toggle-row { display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; padding: 2px 0; }
+.toggle-row input { accent-color: var(--coral); width: 14px; height: 14px; }
+.center { text-align: center; }

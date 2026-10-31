@@ -1,31 +1,27 @@
 {
   "manifest_version": 3,
-  "name": "AURA-MEET: On-Device Meeting Intelligence",
-  "version": "2.0.0",
-  "description": "Detects Google Meet, Zoom and Teams calls, records each meeting as its own session, and turns it into transcript, summary and action items on-device.",
+  "name": "Quorum — private meeting notes",
+  "version": "3.0.0",
+  "description": "Record any meeting tab with one click and get an on-device transcript, summary and action items. Nothing leaves your machine.",
   "permissions": [
     "tabCapture",
     "offscreen",
     "activeTab",
     "storage",
     "sidePanel",
-    "tabs"
+    "tabs",
+    "contextMenus"
   ],
   "host_permissions": [
-    "https://meet.google.com/*",
-    "https://*.zoom.us/*",
-    "https://teams.microsoft.com/*",
-    "https://teams.live.com/*",
-    "https://teams.cloud.microsoft/*",
     "http://localhost:8000/*",
     "http://127.0.0.1:8000/*",
-    "http://localhost:3000/*"
+    "http://localhost:3001/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "AURA-MEET — open copilot",
+    "default_title": "Quorum — open the recorder",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -38,29 +34,16 @@
         "default": "Alt+Shift+R",
         "mac": "Alt+Shift+R"
       },
-      "description": "Start / stop recording the meeting in this tab"
+      "description": "Start / stop recording this tab"
     }
   },
   "side_panel": {
     "default_path": "sidepanel.html"
   },
-  "content_scripts": [
-    {
-      "matches": [
-        "https://meet.google.com/*",
-        "https://*.zoom.us/*",
-        "https://teams.microsoft.com/*",
-        "https://teams.live.com/*",
-        "https://teams.cloud.microsoft/*"
-      ],
-      "js": ["content.js"],
-      "css": ["content.css"],
-      "run_at": "document_idle"
-    }
-  ],
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "short_name": "Quorum"
 }

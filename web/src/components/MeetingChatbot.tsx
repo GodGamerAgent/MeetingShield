@@ -29,9 +29,7 @@ export default function MeetingChatbot({
   const getInitialMessage = (title?: string): ChatMessage => ({
     id: "welcome",
     sender: "bot",
-    text: `I am your Gemma 4 Meeting Intelligence Copilot${
-      title ? ` for "${title}"` : ""
-    }. Ask me about key decisions, action items, speaker commitments, rejected alternatives, or your behavioral coaching audit.`,
+    text: `Ask anything about ${title ? `"${title}"` : "this meeting"} — decisions, action items, who said what. Answers come from the transcript (via Gemma 4) with timestamps.`,
     timestamp: "",
   });
 
@@ -160,7 +158,7 @@ export default function MeetingChatbot({
             key={i}
             type="button"
             onClick={() => onCitationClick && onCitationClick(rawTime)}
-            className="inline-flex items-center gap-1 mx-1 px-1.5 py-0.5 rounded text-[11px] font-mono font-semibold bg-white text-aura-coral border border-aura-pastel hover:bg-aura-mist cursor-pointer"
+            className="inline-flex items-center gap-1 mx-1 px-1.5 py-0.5 rounded text-[11px] font-mono font-semibold bg-white text-brand-coral border border-brand-pastel hover:bg-brand-mist cursor-pointer"
             title="Click to jump to transcript timestamp"
           >
             <Clock className="w-3 h-3" />
@@ -170,7 +168,7 @@ export default function MeetingChatbot({
       }
       if (/^\*\*[^*]+\*\*$/.test(part)) {
         return (
-          <strong key={i} className="font-extrabold text-aura-charcoal">
+          <strong key={i} className="font-extrabold text-brand-charcoal">
             {part.slice(2, -2)}
           </strong>
         );
@@ -180,18 +178,18 @@ export default function MeetingChatbot({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white/95 backdrop-blur-md rounded-3xl border border-aura-pastel/80 card-3d overflow-hidden">
+    <div className="flex flex-col h-full bg-white/95 backdrop-blur-md rounded-3xl border border-brand-pastel/80 card-3d overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-aura-border bg-aura-mist/40">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-brand-border bg-brand-mist/40">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-gradient-to-tr from-aura-peach to-aura-coral text-white shadow-sm">
+          <div className="p-1.5 rounded-lg bg-gradient-to-tr from-brand-peach to-brand-coral text-white shadow-sm">
             <Sparkles className="w-3.5 h-3.5" />
           </div>
           <div>
-            <h3 className="text-xs font-bold text-aura-charcoal uppercase tracking-wider">
+            <h3 className="text-xs font-bold text-brand-charcoal uppercase tracking-wider">
               Meeting Chatbot
             </h3>
-            <p className="text-[10px] text-aura-slate">
+            <p className="text-[10px] text-brand-slate">
               Gemma 4 Grounded Q&amp;A · Click [HH:MM:SS] to jump
             </p>
           </div>
@@ -205,13 +203,13 @@ export default function MeetingChatbot({
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold border cursor-pointer ${
               isThinkingEnabled
                 ? "bg-purple-100 text-purple-800 border-purple-300 ring-1 ring-purple-300"
-                : "bg-white text-aura-slate border-aura-pastel hover:text-aura-charcoal hover:border-aura-peach"
+                : "bg-white text-brand-slate border-brand-pastel hover:text-brand-charcoal hover:border-brand-peach"
             }`}
             title="Toggle Gemma 4 Chain-of-Thought Deep Thinking"
           >
             <Brain
               className={`w-3.5 h-3.5 ${
-                isThinkingEnabled ? "text-purple-600" : "text-aura-slate"
+                isThinkingEnabled ? "text-purple-600" : "text-brand-slate"
               }`}
             />
             <span>Thinking: {isThinkingEnabled ? "ON" : "OFF"}</span>
@@ -220,7 +218,7 @@ export default function MeetingChatbot({
           <button
             type="button"
             onClick={handleClearChat}
-            className="p-1.5 rounded-lg bg-white text-aura-slate hover:text-aura-coral border border-aura-pastel cursor-pointer"
+            className="p-1.5 rounded-lg bg-white text-brand-slate hover:text-brand-coral border border-brand-pastel cursor-pointer"
             title="Reset conversation"
             aria-label="Reset chat conversation"
           >
@@ -230,14 +228,14 @@ export default function MeetingChatbot({
       </div>
 
       {/* Quick Prompts */}
-      <div className="flex flex-wrap items-center gap-1.5 px-3 py-2.5 border-b border-aura-border/60 bg-white/70">
+      <div className="flex flex-wrap items-center gap-1.5 px-3 py-2.5 border-b border-brand-border/60 bg-white/70">
         {quickPrompts.map((p, idx) => (
           <button
             key={idx}
             type="button"
             onClick={() => handleSend(p)}
             disabled={loading}
-            className="text-[10.5px] font-semibold px-2.5 py-1 rounded-xl bg-aura-mist/80 text-aura-charcoal border border-aura-pastel hover:border-aura-coral hover:bg-white btn-3d-light disabled:opacity-50"
+            className="text-[10.5px] font-semibold px-2.5 py-1 rounded-xl bg-brand-mist/80 text-brand-charcoal border border-brand-pastel hover:border-brand-coral hover:bg-white btn-3d-light disabled:opacity-50"
           >
             {p}
           </button>
@@ -259,8 +257,8 @@ export default function MeetingChatbot({
             <div
               className={`w-7 h-7 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${
                 m.sender === "user"
-                  ? "bg-aura-coral text-white font-bold"
-                  : "bg-aura-mist text-aura-coral border border-aura-pastel"
+                  ? "bg-brand-coral text-white font-bold"
+                  : "bg-brand-mist text-brand-coral border border-brand-pastel"
               }`}
             >
               {m.sender === "user" ? (
@@ -272,8 +270,8 @@ export default function MeetingChatbot({
             <div
               className={`max-w-[86%] rounded-2xl p-3 text-xs leading-relaxed shadow-xs ${
                 m.sender === "user"
-                  ? "bg-gradient-to-r from-aura-peach to-aura-coral text-white rounded-tr-none"
-                  : "bg-aura-mist/70 text-aura-charcoal border border-aura-pastel/70 rounded-tl-none"
+                  ? "bg-gradient-to-r from-brand-peach to-brand-coral text-white rounded-tr-none"
+                  : "bg-brand-mist/70 text-brand-charcoal border border-brand-pastel/70 rounded-tl-none"
               }`}
             >
               {m.thought && (
@@ -299,7 +297,7 @@ export default function MeetingChatbot({
                   className={`text-[9.5px] mt-1.5 ${
                     m.sender === "user"
                       ? "text-white/80 text-right"
-                      : "text-aura-slate"
+                      : "text-brand-slate"
                   }`}
                 >
                   {m.timestamp}
@@ -310,15 +308,15 @@ export default function MeetingChatbot({
         ))}
 
         {loading && (
-          <div className="flex items-center gap-2 text-aura-slate text-xs animate-pulse p-2">
-            <Bot className="w-4 h-4 text-aura-coral" />
+          <div className="flex items-center gap-2 text-brand-slate text-xs animate-pulse p-2">
+            <Bot className="w-4 h-4 text-brand-coral" />
             <span>Synthesizing answer from meeting memory via Gemma 4...</span>
           </div>
         )}
       </div>
 
       {/* Input row */}
-      <div className="p-3 border-t border-aura-border bg-white/95">
+      <div className="p-3 border-t border-brand-border bg-white/95">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -332,14 +330,14 @@ export default function MeetingChatbot({
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask about decisions, tasks, speakers, or coaching..."
             aria-label="Ask Meeting Chatbot"
-            className="flex-1 px-3.5 py-2.5 text-xs rounded-xl border border-aura-pastel bg-aura-mist/40 text-aura-charcoal focus:outline-none focus:border-aura-coral focus:bg-white transition-colors"
+            className="flex-1 px-3.5 py-2.5 text-xs rounded-xl border border-brand-pastel bg-brand-mist/40 text-brand-charcoal focus:outline-none focus:border-brand-coral focus:bg-white transition-colors"
           />
           <button
             type="submit"
             onClick={() => handleSend()}
             disabled={!input.trim() || loading}
             aria-label="Send message"
-            className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-aura-peach to-aura-coral text-white font-bold text-xs flex items-center gap-1.5 btn-3d disabled:opacity-40"
+            className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-brand-peach to-brand-coral text-white font-bold text-xs flex items-center gap-1.5 btn-3d disabled:opacity-40"
           >
             <Send className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Ask</span>

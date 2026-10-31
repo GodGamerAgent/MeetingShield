@@ -25,6 +25,10 @@ export default function MeetingsIndexPage() {
   }, [refresh]);
 
   useLiveEvents((ev) => {
+    if (["MEETING_CREATED", "MEETING_UPDATED", "MEETING_DELETED", "SESSIONS_CLEARED"].includes(ev.type)) {
+      refresh();
+      return;
+    }
     const id = ev.meeting_id;
     if (!id) return;
     if (ev.type === "PROCESSING_PROGRESS") {
@@ -53,11 +57,11 @@ export default function MeetingsIndexPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-aura-charcoal tracking-tight">Sessions</h1>
-          <p className="text-xs text-aura-slate mt-1">{meetings.length} recorded meetings, each with its own audio, transcript and notes.</p>
+          <h1 className="text-2xl font-extrabold text-brand-charcoal tracking-tight">Sessions</h1>
+          <p className="text-xs text-brand-slate mt-1">{meetings.length} recorded meetings, each with its own audio, transcript and notes.</p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-aura-pastel w-full sm:w-64">
-          <Search className="w-3.5 h-3.5 text-aura-coral" />
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-brand-pastel w-full sm:w-64">
+          <Search className="w-3.5 h-3.5 text-brand-coral" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -66,11 +70,11 @@ export default function MeetingsIndexPage() {
           />
         </div>
       </div>
-      <div className="rounded-3xl bg-white/85 border border-aura-pastel/80 shadow-peach-sm p-3 sm:p-4">
+      <div className="rounded-3xl bg-white/85 border border-brand-pastel/80 shadow-peach-sm p-3 sm:p-4">
         {loaded ? (
           <SessionList meetings={filtered} progress={progress} onDelete={handleDelete} />
         ) : (
-          <div className="py-10 text-center text-xs text-aura-slate">Loading sessions…</div>
+          <div className="py-10 text-center text-xs text-brand-slate">Loading sessions…</div>
         )}
       </div>
     </div>

@@ -3,22 +3,26 @@ import os
 from typing import Dict, Any
 from pydantic import BaseModel, Field
 
-CONFIG_FILE = os.environ.get("AURA_CONFIG_FILE") or os.path.join(os.path.dirname(__file__), "config.json")
-DEFAULT_AUDIO_DIR = os.environ.get("AURA_AUDIO_DIR") or os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "recordings"))
+CONFIG_FILE = os.environ.get("QUORUM_CONFIG_FILE") or os.path.join(os.path.dirname(__file__), "config.json")
+DEFAULT_AUDIO_DIR = os.environ.get("QUORUM_AUDIO_DIR") or os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "recordings"))
 
 class AppConfig(BaseModel):
-    lm_studio_base_url: str = Field(default="http://localhost:1234/v1")
-    lm_studio_model: str = Field(default="gemma-4")
+    model_config = {"extra": "ignore"}
+
+    lm_studio_base_url: str = Field(default_factory=lambda: os.environ.get("LM_STUDIO_BASE_URL", "http://localhost:1234/v1"))
+    lm_studio_model: str = Field(default_factory=lambda: os.environ.get("LM_STUDIO_MODEL", "google/gemma-4-26b-a4b-qat"))
     temperature: float = Field(default=0.2)
     max_tokens: int = Field(default=2048)
     vad_aggressiveness: int = Field(default=2)
     noise_cleaning_enabled: bool = Field(default=True)
     epoch_window_minutes: int = Field(default=10)
     default_calendar: str = Field(default="google")
-    user_name: str = Field(default="Robin")
+    user_name: str = Field(default="Me")
     audio_export_dir: str = Field(default=DEFAULT_AUDIO_DIR)
-    whisper_model: str = Field(default="base")
+    whisper_model: str = Field(default="large-v3-turbo")
     whisper_language: str = Field(default="auto")
+    # Shared with the Chrome extension: transcribe & summarize as soon as a recording stops
+    auto_process_enabled: bool = Field(default=True)
 
 class ConfigStore:
     def __init__(self, filepath: str = CONFIG_FILE):

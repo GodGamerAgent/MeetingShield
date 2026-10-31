@@ -127,48 +127,48 @@ export default function SessionSwitcher({ currentMeetingId, onSelectMeeting }: S
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-aura-pastel bg-white hover:bg-aura-mist/60 text-xs font-semibold text-aura-charcoal btn-3d-light"
+        className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-brand-pastel bg-white hover:bg-brand-mist/60 text-xs font-semibold text-brand-charcoal btn-3d-light"
         title="Switch between recorded sessions"
       >
-        <div className="w-2 h-2 rounded-full bg-aura-coral flex-shrink-0" />
+        <div className="w-2 h-2 rounded-full bg-brand-coral flex-shrink-0" />
         <div className="flex flex-col text-left max-w-[170px] sm:max-w-[220px]">
           <span className="truncate leading-tight font-bold">
             {activeMeeting ? activeMeeting.title : "Jump to a session"}
           </span>
-          <span className="text-[10px] text-aura-slate font-normal">
+          <span className="text-[10px] text-brand-slate font-normal">
             {meetings.length} session{meetings.length === 1 ? "" : "s"} recorded
           </span>
         </div>
-        <ChevronDown className="w-3.5 h-3.5 text-aura-slate ml-1" />
+        <ChevronDown className="w-3.5 h-3.5 text-brand-slate ml-1" />
       </button>
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute left-0 top-full mt-2 w-80 sm:w-96 rounded-2xl bg-white backdrop-blur-2xl border border-aura-pastel shadow-2xl ring-1 ring-aura-peach/30 p-3 z-[999]">
-          <div className="flex items-center justify-between pb-2 mb-2 border-b border-aura-border">
-            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-aura-charcoal">
-              <Layers className="w-3.5 h-3.5 text-aura-coral" />
+        <div className="absolute left-0 top-full mt-2 w-80 sm:w-96 rounded-2xl bg-white backdrop-blur-2xl border border-brand-pastel shadow-2xl ring-1 ring-brand-peach/30 p-3 z-[999]">
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-brand-border">
+            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-charcoal">
+              <Layers className="w-3.5 h-3.5 text-brand-coral" />
               <span>Switch Meeting Session</span>
             </div>
           </div>
 
           {/* Search Bar */}
           <div className="relative mb-2.5">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-aura-slate" />
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-slate" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search sessions..."
-              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-aura-pastel/80 bg-aura-mist/40 text-aura-charcoal focus:outline-none focus:border-aura-coral shadow-inner"
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-brand-pastel/80 bg-brand-mist/40 text-brand-charcoal focus:outline-none focus:border-brand-coral shadow-inner"
             />
           </div>
 
           {/* Sessions List */}
           <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
             {filteredMeetings.length === 0 ? (
-              <div className="text-center py-6 text-aura-slate text-xs space-y-2">
-                <p className="font-semibold text-aura-charcoal">No sessions found.</p>
+              <div className="text-center py-6 text-brand-slate text-xs space-y-2">
+                <p className="font-semibold text-brand-charcoal">No sessions found.</p>
                 <p className="text-[11px]">Sessions are created when you record a meeting with the extension.</p>
               </div>
             ) : (
@@ -180,18 +180,18 @@ export default function SessionSwitcher({ currentMeetingId, onSelectMeeting }: S
                     onClick={() => handleSelect(m.id)}
                     className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer group ${
                       isSelected
-                        ? "bg-aura-mist/90 border-aura-peach shadow-xs"
-                        : "bg-white border-aura-border/70 hover:border-aura-pastel hover:bg-aura-mist/30"
+                        ? "bg-brand-mist/90 border-brand-peach shadow-xs"
+                        : "bg-white border-brand-border/70 hover:border-brand-pastel hover:bg-brand-mist/30"
                     }`}
                   >
                     <div className="min-w-0 flex-1 pr-2">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-aura-charcoal truncate">
+                        <span className="text-xs font-bold text-brand-charcoal truncate">
                           {m.title}
                         </span>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-aura-coral flex-shrink-0" />}
+                        {isSelected && <Check className="w-3.5 h-3.5 text-brand-coral flex-shrink-0" />}
                       </div>
-                      <div className="flex items-center gap-2 text-[10px] text-aura-slate mt-0.5">
+                      <div className="flex items-center gap-2 text-[10px] text-brand-slate mt-0.5">
                         <span suppressHydrationWarning className="flex items-center gap-1">
                           <Calendar className="w-2.5 h-2.5" />
                           {new Date(m.created_at).toLocaleDateString([], { month: "short", day: "numeric" })}
@@ -208,7 +208,7 @@ export default function SessionSwitcher({ currentMeetingId, onSelectMeeting }: S
                     <button
                       type="button"
                       onClick={(e) => handleDelete(e, m.id)}
-                      className="p-1.5 rounded-lg text-aura-slate hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                      className="p-1.5 rounded-lg text-brand-slate hover:text-rose-600 hover:bg-rose-50 transition-colors"
                       title="Delete Session"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

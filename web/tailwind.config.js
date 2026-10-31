@@ -8,7 +8,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        aura: {
+        brand: {
           bg: "#FFFDFB",
           mist: "#FFF4EE",
           card: "rgba(255, 255, 255, 0.85)",

@@ -1,5 +1,5 @@
 {
-  "name": "aura-meet-workspace",
+  "name": "quorum",
   "version": "1.0.0",
   "private": true,
   "workspaces": [
@@ -10,5 +10,7 @@
     "build": "npm run build --workspace=web",
     "start": "npm run start --workspace=web",
     "lint": "npm run lint --workspace=web"
-  }
+  },
+  "description": "Private, on-device meeting notes with Whisper and Gemma 4",
+  "license": "MIT"
 }

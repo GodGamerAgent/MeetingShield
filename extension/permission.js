@@ -1,4 +1,4 @@
-// AURA-MEET One-Time Microphone Permission Grant Handler
+// Quorum One-Time Microphone Permission Grant Handler
 
 const statusEl = document.getElementById("status");
 const grantBtn = document.getElementById("grant-btn");
