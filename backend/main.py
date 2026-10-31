@@ -20,7 +20,7 @@ from config_store import config_store
 from database import init_db, get_db, clear_all_data, seed_initial_data
 from audio_pipeline import audio_pipeline
 from context_manager import context_manager
-from intelligence_engine import intelligence_engine
+from intelligence_engine import intelligence_engine, TODO_ORDER
 from individual_tracker import individual_tracker
 from calendar_service import calendar_service
 from markdown_exporter import generate_meeting_markdown, save_meeting_markdown_file, get_meeting_markdown_path
@@ -653,33 +653,76 @@ def get_meeting_analysis(meeting_id: str):
 def get_meeting_todos(meeting_id: str):
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM todos WHERE meeting_id = ? ORDER BY priority ASC", (meeting_id,))
+    cur.execute(f"SELECT * FROM todos WHERE meeting_id = ? ORDER BY {TODO_ORDER}", (meeting_id,))
     rows = [dict(r) for r in cur.fetchall()]
     conn.close()
     return rows
 
 @app.post("/api/meetings/{meeting_id}/generate-analysis")
 async def generate_analysis(meeting_id: str):
-    return await intelligence_engine.generate_post_meeting_synthesis(meeting_id)
+    result = await intelligence_engine.generate_post_meeting_synthesis(meeting_id)
+    # To-dos were regenerated with new ids (done / pinned state carried over); views must reload them
+    await live_hub.broadcast({"type": "TODOS_REPLACED", "meeting_id": meeting_id})
+    return result
+
+class PinTodoReq(BaseModel):
+    pinned: Optional[bool] = None  # omit to toggle
+
+def _todo_payload(todo_id: str) -> Dict[str, Any]:
+    conn = get_db()
+    row = conn.execute("""
+    SELECT t.*, m.title AS meeting_title FROM todos t LEFT JOIN meetings m ON t.meeting_id = m.id WHERE t.id = ?
+    """, (todo_id,)).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Todo not found")
+    return dict(row)
 
 @app.post("/api/todos/{todo_id}/toggle")
-def toggle_todo(todo_id: str):
+async def toggle_todo(todo_id: str):
+    todo = _todo_payload(todo_id)
+    new_state = 0 if todo["completed"] == 1 else 1
     conn = get_db()
-    cur = conn.cursor()
-    cur.execute("SELECT completed FROM todos WHERE id = ?", (todo_id,))
-    row = cur.fetchone()
-    if not row:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Todo not found")
-    new_state = 0 if row["completed"] == 1 else 1
-    cur.execute("UPDATE todos SET completed = ? WHERE id = ?", (new_state, todo_id))
+    conn.execute("UPDATE todos SET completed = ? WHERE id = ?", (new_state, todo_id))
     conn.commit()
     conn.close()
+    todo = _todo_payload(todo_id)
+    await live_hub.broadcast({"type": "TODO_UPDATED", "meeting_id": todo["meeting_id"], "todo": todo})
     return {
         "id": todo_id,
         "completed": bool(new_state),
-        "status": "COMPLETED" if new_state else "PENDING"
+        "status": "COMPLETED" if new_state else "PENDING",
+        "todo": todo,
     }
+
+@app.post("/api/todos/{todo_id}/pin")
+async def pin_todo(todo_id: str, req: Optional[PinTodoReq] = None):
+    """Pin a task so it stays at the top of its meeting and on the Home dashboard."""
+    todo = _todo_payload(todo_id)
+    pinned = (not bool(todo["pinned"])) if req is None or req.pinned is None else bool(req.pinned)
+    conn = get_db()
+    conn.execute("UPDATE todos SET pinned = ?, pinned_at = ? WHERE id = ?",
+                 (1 if pinned else 0, datetime.now(timezone.utc).isoformat() if pinned else None, todo_id))
+    conn.commit()
+    conn.close()
+    todo = _todo_payload(todo_id)
+    try:
+        save_meeting_markdown_file(todo["meeting_id"])
+    except Exception:
+        pass
+    await live_hub.broadcast({"type": "TODO_UPDATED", "meeting_id": todo["meeting_id"], "todo": todo})
+    return {"id": todo_id, "pinned": pinned, "todo": todo}
+
+@app.get("/api/todos/pinned")
+def list_pinned_todos():
+    """Pinned tasks across every meeting, most recently pinned first."""
+    conn = get_db()
+    rows = [dict(r) for r in conn.execute("""
+    SELECT t.*, m.title AS meeting_title FROM todos t LEFT JOIN meetings m ON t.meeting_id = m.id
+    WHERE t.pinned = 1 ORDER BY t.completed ASC, t.pinned_at DESC
+    """)]
+    conn.close()
+    return rows
 
 # ----------------- Meeting Processing Pipeline -----------------
 meeting_processing_state: Dict[str, Dict[str, Any]] = {}

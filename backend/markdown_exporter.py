@@ -68,7 +68,8 @@ def generate_meeting_markdown(meeting_id: str) -> str:
         action_plan = []
 
     # 3. Todos
-    cur.execute("SELECT * FROM todos WHERE meeting_id = ? ORDER BY priority ASC", (meeting_id,))
+    cur.execute("""SELECT * FROM todos WHERE meeting_id = ? ORDER BY pinned DESC, completed ASC,
+                   CASE priority WHEN 'HIGH' THEN 0 WHEN 'MEDIUM' THEN 1 ELSE 2 END, timestamp_ref ASC""", (meeting_id,))
     todos = [dict(r) for r in cur.fetchall()]
 
     # 4. Things to remember
@@ -156,7 +157,8 @@ def generate_meeting_markdown(meeting_id: str) -> str:
             owner = t.get("owner", "Unassigned")
             deadline = t.get("deadline", "Next Sprint")
             badge = t.get("timestamp_ref", "00:00:00")
-            md_lines.append(f"- {check} **[{prio}]** {task} — *Owner:* **{owner}** | *Deadline:* {deadline} (`[{badge}]`)")
+            pin = "⭐ " if t.get("pinned") else ""
+            md_lines.append(f"- {check} {pin}**[{prio}]** {task} — *Owner:* **{owner}** | *Deadline:* {deadline} (`[{badge}]`)")
     else:
         md_lines.append("- [ ] _No action items logged yet._")
     md_lines.append("\n---\n")

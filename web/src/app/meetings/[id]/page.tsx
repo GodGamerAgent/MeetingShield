@@ -6,8 +6,9 @@ import Link from "next/link";
 import {
   FileText, CheckSquare, Bookmark, Calendar, Clock, Sparkles, Check, ShieldCheck, XCircle,
   Mail, FileDown, Loader2, AlertTriangle, RotateCw, Users, Edit3, ArrowLeft, Lightbulb, Layers, Trash2, CheckCircle2,
+  Pin,
 } from "lucide-react";
-import { api, Meeting, TodoItem, MemoryCard, TranscriptSegment, DominanceData, CoachingCard } from "@/lib/api";
+import { api, sortTodos, Meeting, TodoItem, MemoryCard, TranscriptSegment, DominanceData, CoachingCard } from "@/lib/api";
 import { useLiveEvents } from "@/lib/useLiveEvents";
 import CalendarModal from "@/components/CalendarModal";
 import LiveNotesPad from "@/components/LiveNotesPad";
@@ -94,7 +95,10 @@ export default function MeetingDetailPage() {
       return;
     }
     if (ev.meeting_id !== meetingId) return;
-    if (ev.type === "MEETING_DELETED") {
+    if (ev.type === "TODO_UPDATED" && ev.todo) {
+      // Ticked or pinned from Home or another tab
+      mergeTodo(ev.todo);
+    } else if (ev.type === "MEETING_DELETED") {
       setMeeting(null);
     } else if (ev.type === "MEETING_UPDATED" && ev.meeting) {
       // Renamed / re-scoped from the extension or another tab
@@ -105,6 +109,8 @@ export default function MeetingDetailPage() {
     } else if (ev.type === "PROCESSING_PROGRESS") {
       setProgress({ progress: ev.progress, message: ev.message });
       setMeeting((m) => (m ? { ...m, status: "processing" } : m));
+    } else if (ev.type === "TODOS_REPLACED") {
+      api.getAnalysis(meetingId).then(setAnalysis).catch(() => {});
     } else if (ev.type === "MEETING_PROCESSED" || ev.type === "PROCESSING_ERROR" || ev.type === "RECORDING_STOPPED") {
       setProgress(null);
       loadAll();
@@ -169,9 +175,27 @@ export default function MeetingDetailPage() {
     }
   };
 
+  const mergeTodo = (todo: TodoItem) => {
+    setAnalysis((a) => (a ? { ...a, todos: a.todos.map((t) => (t.id === todo.id ? { ...t, ...todo } : t)) } : a));
+  };
+
+  const handlePinTodo = async (todoId: string) => {
+    try {
+      const res = await api.pinTodo(todoId);
+      mergeTodo(res.todo);
+    } catch {
+      setActionBanner("Couldn't pin that task — is the backend running?");
+      setTimeout(() => setActionBanner(null), 4000);
+    }
+  };
+
   const handleToggleTodo = async (todoId: string) => {
-    const res = await api.toggleTodo(todoId);
-    setAnalysis((a) => (a ? { ...a, todos: a.todos.map((t) => (t.id === todoId ? { ...t, completed: res.completed ? 1 : 0 } : t)) } : a));
+    try {
+      mergeTodo((await api.toggleTodo(todoId)).todo);
+    } catch {
+      setActionBanner("Couldn't update that task — is the backend running?");
+      setTimeout(() => setActionBanner(null), 4000);
+    }
   };
 
   const speakerOptions = useMemo(() => {
@@ -181,7 +205,7 @@ export default function MeetingDetailPage() {
   }, [transcript, meeting, userName]);
 
   const owners = useMemo(() => Array.from(new Set((analysis?.todos || []).map((t) => t.owner).filter(Boolean))), [analysis]);
-  const todos = (analysis?.todos || []).filter((t) => ownerFilter === "ALL" || t.owner === ownerFilter);
+  const todos = sortTodos((analysis?.todos || []).filter((t) => ownerFilter === "ALL" || t.owner === ownerFilter));
 
   if (loading) {
     return (
@@ -395,8 +419,9 @@ export default function MeetingDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {todos.map((t) => {
                 const done = t.completed === 1;
+                const pinned = t.pinned === 1;
                 return (
-                  <div key={t.id} className={`p-4 rounded-2xl border flex flex-col gap-3 ${done ? "bg-slate-50 border-slate-200 opacity-70" : "bg-white border-brand-pastel/80"}`}>
+                  <div key={t.id} className={`p-4 rounded-2xl border flex flex-col gap-3 ${done ? "bg-slate-50 border-slate-200 opacity-70" : pinned ? "bg-amber-50/60 border-amber-300 shadow-xs" : "bg-white border-brand-pastel/80"}`}>
                     <div className="flex items-start gap-3">
                       <button onClick={() => handleToggleTodo(t.id)}
                         className={`w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 mt-0.5 ${done ? "bg-brand-coral border-brand-coral text-white" : "border-brand-pastel bg-white hover:border-brand-peach"}`}>
@@ -404,6 +429,15 @@ export default function MeetingDetailPage() {
                       </button>
                       <p className={`text-xs font-semibold leading-snug flex-1 ${done ? "line-through text-brand-slate" : "text-brand-charcoal"}`}>{t.task}</p>
                       <PriorityBadge priority={t.priority} />
+                      <button
+                        onClick={() => handlePinTodo(t.id)}
+                        aria-pressed={pinned}
+                        aria-label={pinned ? "Unpin task" : "Pin task"}
+                        title={pinned ? "Unpin" : "Pin to the top and to Home"}
+                        className={`p-1 -m-1 rounded-md flex-shrink-0 transition-colors ${pinned ? "text-amber-600 hover:text-amber-700" : "text-brand-slate/60 hover:text-brand-coral"}`}
+                      >
+                        <Pin className={`w-3.5 h-3.5 ${pinned ? "fill-current" : ""}`} />
+                      </button>
                     </div>
                     <div className="flex items-center justify-between text-[11px] text-brand-slate">
                       <span>

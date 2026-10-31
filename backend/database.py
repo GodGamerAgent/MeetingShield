@@ -121,6 +121,11 @@ def init_db():
         FOREIGN KEY (meeting_id) REFERENCES meetings (id) ON DELETE CASCADE
     )
     """)
+    for column in ("pinned INTEGER DEFAULT 0", "pinned_at TEXT"):
+        try:
+            cur.execute(f"ALTER TABLE todos ADD COLUMN {column}")
+        except Exception:
+            pass
 
     # Things to Remember (Sticky Memory Cards)
     cur.execute("""

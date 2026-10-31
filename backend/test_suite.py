@@ -403,6 +403,62 @@ def test_meeting_chatbot():
     assert len(reply["response"]) > 0
 test("Meeting chatbot retrieves exact context with timestamps", test_meeting_chatbot)
 
+# 8b. TASK PINNING
+print("\n8b. TASK PINNING")
+def test_task_pinning():
+    mid = client.post("/api/meetings", json={"title": "Pin test", "status": "recorded"}).json()["id"]
+    intelligence_engine._persist_synthesis(mid, {
+        "executive_summary": "x",
+        "todos": [
+            {"task": "Ship the API", "owner": "Arnab", "priority": "HIGH", "timestamp_ref": "00:01:00"},
+            {"task": "Write docs", "owner": "Me", "priority": "LOW", "timestamp_ref": "00:02:00"},
+            {"task": "Fix login bug", "owner": "Jayesh", "priority": "MEDIUM", "timestamp_ref": "00:03:00"},
+        ],
+    })
+    todos = client.get(f"/api/meetings/{mid}/todos").json()
+    assert [t["priority"] for t in todos] == ["HIGH", "MEDIUM", "LOW"], "priority order must be HIGH, MEDIUM, LOW"
+    docs = next(t for t in todos if t["task"] == "Write docs")
+    fix = next(t for t in todos if t["task"] == "Fix login bug")
+
+    # Toggle pin on, it jumps to the top of the meeting and appears in the global list
+    res = client.post(f"/api/todos/{docs['id']}/pin").json()
+    assert res["pinned"] is True and res["todo"]["meeting_title"] == "Pin test"
+    assert client.get(f"/api/meetings/{mid}/todos").json()[0]["id"] == docs["id"]
+    assert [t["id"] for t in client.get("/api/todos/pinned").json()] == [docs["id"]]
+
+    # Explicit pin is idempotent; explicit unpin works; missing task is a 404
+    assert client.post(f"/api/todos/{docs['id']}/pin", json={"pinned": True}).json()["pinned"] is True
+    assert client.post(f"/api/todos/{fix['id']}/pin", json={"pinned": True}).json()["pinned"] is True
+    assert client.post(f"/api/todos/{fix['id']}/pin", json={"pinned": False}).json()["pinned"] is False
+    assert client.post("/api/todos/does-not-exist/pin").status_code == 404
+
+    # Done + pinned survives a re-summary, even if the model rewords punctuation/case
+    client.post(f"/api/todos/{docs['id']}/toggle")
+    intelligence_engine._persist_synthesis(mid, {
+        "executive_summary": "y",
+        "todos": [
+            {"task": "write docs!", "owner": "Me", "priority": "LOW", "timestamp_ref": "00:02:00"},
+            {"task": "Ship the API", "owner": "Arnab", "priority": "HIGH", "timestamp_ref": "00:01:00"},
+        ],
+    })
+    after = client.get(f"/api/meetings/{mid}/todos").json()
+    kept = next(t for t in after if t["task"] == "write docs!")
+    assert kept["pinned"] == 1 and kept["completed"] == 1, "pin and done state must carry over"
+    assert after[0]["id"] == kept["id"]
+
+    # A pinned task the new summary dropped is kept rather than silently lost
+    client.post(f"/api/todos/{after[1]['id']}/pin", json={"pinned": True})   # pin "Ship the API"
+    intelligence_engine._persist_synthesis(mid, {"executive_summary": "z", "todos": []})
+    left = client.get(f"/api/meetings/{mid}/todos").json()
+    assert sorted(t["task"] for t in left) == ["Ship the API", "write docs!"]
+    assert all(t["pinned"] == 1 for t in left)
+    assert next(t for t in left if t["task"] == "Ship the API")["owner"] == "Arnab"
+
+    # Deleting the meeting removes its pinned tasks from the global list
+    client.delete(f"/api/meetings/{mid}")
+    assert client.get("/api/todos/pinned").json() == []
+test("Pin / unpin tasks, ordering, pinned list, survives re-summary", test_task_pinning)
+
 # 9. AUDIO DOWNLOAD AND CLEANUP
 print("\n9. SESSION AUDIO DOWNLOAD & CLEANUP")
 def test_audio_download_and_clear():

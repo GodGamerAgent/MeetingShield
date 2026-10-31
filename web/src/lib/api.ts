@@ -104,6 +104,22 @@ export interface TodoItem {
   priority: "HIGH" | "MEDIUM" | "LOW";
   timestamp_ref: string;
   completed: number;
+  pinned?: number;
+  pinned_at?: string | null;
+  meeting_title?: string;
+}
+
+const PRIORITY_RANK: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+
+/** Same order as the backend: pinned first, then open before done, then priority, then time in the meeting. */
+export function sortTodos<T extends TodoItem>(todos: T[]): T[] {
+  return [...todos].sort(
+    (a, b) =>
+      (b.pinned || 0) - (a.pinned || 0) ||
+      (a.completed || 0) - (b.completed || 0) ||
+      (PRIORITY_RANK[a.priority] ?? 1) - (PRIORITY_RANK[b.priority] ?? 1) ||
+      (a.timestamp_ref || "").localeCompare(b.timestamp_ref || "")
+  );
 }
 
 export interface MemoryCard {
@@ -299,8 +315,23 @@ export const api = {
     });
     return res.json();
   },
-  async toggleTodo(todoId: string) {
+  async toggleTodo(todoId: string): Promise<{ id: string; completed: boolean; todo: TodoItem }> {
     const res = await fetch(`${API_BASE}/api/todos/${todoId}/toggle`, { method: "POST" });
+    if (!res.ok) throw new Error("Could not update task");
+    return res.json();
+  },
+  async pinTodo(todoId: string, pinned?: boolean): Promise<{ id: string; pinned: boolean; todo: TodoItem }> {
+    const res = await fetch(`${API_BASE}/api/todos/${todoId}/pin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(pinned === undefined ? {} : { pinned }),
+    });
+    if (!res.ok) throw new Error("Could not pin task");
+    return res.json();
+  },
+  async getPinnedTodos(): Promise<TodoItem[]> {
+    const res = await fetch(`${API_BASE}/api/todos/pinned`, { cache: "no-store" });
+    if (!res.ok) throw new Error("Could not load pinned tasks");
     return res.json();
   },
   async getIndividuals(): Promise<IndividualProfile[]> {

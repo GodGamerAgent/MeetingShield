@@ -17,6 +17,7 @@ import {
 import { api, Meeting, ActiveRecording } from "@/lib/api";
 import { useLiveEvents } from "@/lib/useLiveEvents";
 import SessionList, { SessionProgress, formatDuration } from "@/components/SessionList";
+import PinnedTasks from "@/components/PinnedTasks";
 
 export default function HomePage() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -238,6 +239,8 @@ export default function HomePage() {
           ))}
         </div>
       )}
+
+      <PinnedTasks />
 
       <div className="rounded-3xl bg-white/85 border border-brand-pastel/80 p-4 sm:p-5 card-3d scroll-reveal">
         <div className="flex items-center justify-between px-3 pb-3">

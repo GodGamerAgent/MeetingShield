@@ -21,6 +21,17 @@ COMMITMENT_PATTERN = re.compile(
 )
 
 
+# Pinned first, then open before done, then by priority and time in the meeting
+TODO_ORDER = (
+    "pinned DESC, completed ASC, "
+    "CASE priority WHEN 'HIGH' THEN 0 WHEN 'MEDIUM' THEN 1 ELSE 2 END, timestamp_ref ASC"
+)
+
+
+def _task_key(task: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", (task or "").lower()).strip()
+
+
 class LLMUnavailable(Exception):
     pass
 
@@ -485,17 +496,37 @@ Return JSON with these keys:
             now_iso
         ))
 
+        # Re-summarizing regenerates to-dos; keep what the user did (done / pinned) for tasks that come back
+        previous = {
+            _task_key(r["task"]): r for r in cur.execute(
+                "SELECT task, owner, deadline, priority, timestamp_ref, completed, pinned, pinned_at "
+                "FROM todos WHERE meeting_id = ?", (meeting_id,))
+        }
+        kept_pins = [r for r in previous.values() if r["pinned"]]
         cur.execute("DELETE FROM todos WHERE meeting_id = ?", (meeting_id,))
+        new_keys = set()
         for t in self._as_list(parsed.get("todos")):
             if not isinstance(t, dict) or not t.get("task"):
                 continue
             prio = str(t.get("priority", "MEDIUM")).upper()
+            key = _task_key(str(t["task"]))
+            new_keys.add(key)
+            prev = previous.get(key)
             cur.execute("""
-            INSERT INTO todos (id, meeting_id, task, owner, deadline, priority, timestamp_ref, completed, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)
+            INSERT INTO todos (id, meeting_id, task, owner, deadline, priority, timestamp_ref, completed, pinned, pinned_at, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (f"todo-{uuid.uuid4().hex[:8]}", meeting_id, str(t["task"]), str(t.get("owner") or "Unassigned"),
                   str(t.get("deadline") or ""), prio if prio in ("HIGH", "MEDIUM", "LOW") else "MEDIUM",
-                  self._ts(t.get("timestamp_ref")), now_iso))
+                  self._ts(t.get("timestamp_ref")), prev["completed"] if prev else 0,
+                  prev["pinned"] if prev else 0, prev["pinned_at"] if prev else None, now_iso))
+        # A pinned task the new summary dropped is still something the user chose to track: keep it
+        for row in kept_pins:
+            if _task_key(row["task"]) not in new_keys:
+                cur.execute("""
+                INSERT INTO todos (id, meeting_id, task, owner, deadline, priority, timestamp_ref, completed, pinned, pinned_at, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+                """, (f"todo-{uuid.uuid4().hex[:8]}", meeting_id, row["task"], row["owner"], row["deadline"] or "",
+                      row["priority"], row["timestamp_ref"], row["completed"], row["pinned_at"], now_iso))
 
         cur.execute("DELETE FROM things_to_remember WHERE meeting_id = ?", (meeting_id,))
         for m in self._as_list(parsed.get("things_to_remember")):
@@ -610,8 +641,7 @@ Return JSON with these keys:
         cur = conn.cursor()
         analysis_row = cur.execute("SELECT * FROM meeting_analysis WHERE meeting_id = ?", (meeting_id,)).fetchone()
         todos = [dict(r) for r in cur.execute(
-            "SELECT * FROM todos WHERE meeting_id = ? ORDER BY completed ASC, "
-            "CASE priority WHEN 'HIGH' THEN 0 WHEN 'MEDIUM' THEN 1 ELSE 2 END, timestamp_ref ASC", (meeting_id,))]
+            f"SELECT * FROM todos WHERE meeting_id = ? ORDER BY {TODO_ORDER}", (meeting_id,))]
         memories = [dict(r) for r in cur.execute(
             "SELECT * FROM things_to_remember WHERE meeting_id = ? ORDER BY timestamp_ref ASC", (meeting_id,))]
         coaching = [dict(r) for r in cur.execute(

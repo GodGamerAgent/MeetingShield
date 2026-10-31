@@ -37,7 +37,7 @@ else
 fi
 
 echo "[run]  Backend   -> http://localhost:8000  (API docs at /docs)"
-backend/venv/bin/uvicorn main:app --app-dir backend --host 127.0.0.1 --port 8000 --reload &
+backend/venv/bin/uvicorn main:app --app-dir backend --host 127.0.0.1 --port 8000 --reload --timeout-graceful-shutdown 3 &
 BACKEND_PID=$!
 
 echo "[run]  Dashboard -> http://localhost:3001"
