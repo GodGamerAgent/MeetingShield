@@ -272,6 +272,10 @@ def delete_meeting(meeting_id: str):
     cur.execute("DELETE FROM things_to_remember WHERE meeting_id = ?", (meeting_id,))
     cur.execute("DELETE FROM behavioral_coaching WHERE meeting_id = ?", (meeting_id,))
     cur.execute("DELETE FROM individual_interactions WHERE meeting_id = ?", (meeting_id,))
+    cur.execute("""
+    DELETE FROM individuals
+    WHERE id NOT IN (SELECT DISTINCT individual_id FROM individual_interactions WHERE individual_id IS NOT NULL)
+    """)
     conn.commit()
     conn.close()
     active_recordings.pop(meeting_id, None)
@@ -292,7 +296,7 @@ def delete_meeting(meeting_id: str):
         except Exception:
             pass
 
-    return {"deleted": True, "id": meeting_id}
+    return {"deleted": True, "id": meeting_id, "files_deleted": True}
 
 # ----------------- Audio File Download & Info -----------------
 @app.get("/api/meetings/{meeting_id}/audio")
@@ -544,6 +548,7 @@ async def reassign_speaker(meeting_id: str, seg_id: str, speaker_name: str = Que
 
     try:
         save_meeting_markdown_file(meeting_id)
+        await intelligence_engine.generate_post_meeting_synthesis(meeting_id)
     except Exception:
         pass
     return {"updated": len(ids), "segment_ids": ids, "speaker_name": speaker_name, "is_user": is_user,
@@ -760,36 +765,84 @@ def get_processing_status(meeting_id: str):
 def get_active_recordings():
     return list(active_recordings.values())
 
+WHISPER_CATALOG = [
+    {"id": "large-v3-turbo", "name": "Whisper Large-v3-Turbo", "badge": "Fast • Recommended", "size": "1.5 GB", "recommended": True},
+    {"id": "large-v3", "name": "Whisper Large-v3", "badge": "Highest Accuracy", "size": "2.9 GB", "recommended": False},
+    {"id": "medium", "name": "Whisper Medium", "badge": "Balanced Multilingual", "size": "1.4 GB", "recommended": False},
+    {"id": "small", "name": "Whisper Small", "badge": "Fast & Lightweight", "size": "466 MB", "recommended": False},
+    {"id": "base", "name": "Whisper Base", "badge": "Ultra-Fast Standard", "size": "145 MB", "recommended": False},
+]
+
+def _is_whisper_model_downloaded(model_id: str) -> bool:
+    models_dir = os.path.join(os.path.dirname(__file__), "models")
+    local_dir = os.path.join(models_dir, model_id)
+    if os.path.isdir(local_dir) and (
+        os.path.exists(os.path.join(local_dir, "model.bin")) or
+        os.path.exists(os.path.join(local_dir, ".downloaded"))
+    ):
+        return True
+    hf_cache = os.path.expanduser(f"~/.cache/huggingface/hub/models--Systran--faster-whisper-{model_id}")
+    if os.path.isdir(hf_cache):
+        return True
+    return False
+
+class WhisperDownloadReq(BaseModel):
+    model_id: str
+
 @app.get("/api/models/whisper")
 def list_whisper_models():
-    models_dir = os.path.join(os.path.dirname(__file__), "models")
-    turbo_dir = os.path.join(models_dir, "large-v3-turbo")
-    large_dir = os.path.join(models_dir, "large-v3")
-    turbo_ready = os.path.isdir(turbo_dir) and os.path.exists(os.path.join(turbo_dir, "model.bin"))
-    large_ready = os.path.isdir(large_dir) and os.path.exists(os.path.join(large_dir, "model.bin"))
-
+    models = []
+    for item in WHISPER_CATALOG:
+        downloaded = _is_whisper_model_downloaded(item["id"])
+        models.append({
+            **item,
+            "downloaded": downloaded,
+            "ready": downloaded,
+            "status": "Downloaded (Local)" if downloaded else "Not Downloaded",
+        })
+    active = config_store.get().whisper_model or "large-v3-turbo"
+    downloaded_ids = [m["id"] for m in models if m["downloaded"]]
+    if active not in downloaded_ids and downloaded_ids:
+        active = downloaded_ids[0]
     return {
-        "models": [
-            {
-                "id": "large-v3-turbo",
-                "name": "Whisper Large-v3-Turbo",
-                "badge": "Fast • Recommended",
-                "size": "1.5 GB",
-                "status": "Ready (Local)" if turbo_ready else "Available",
-                "ready": turbo_ready,
-                "recommended": True
-            },
-            {
-                "id": "large-v3",
-                "name": "Whisper Large-v3",
-                "badge": "Highest Accuracy",
-                "size": "2.9 GB",
-                "status": "Ready (Local)" if large_ready else "Available",
-                "ready": large_ready,
-                "recommended": False
-            }
-        ],
-        "active_model": config_store.get().whisper_model or "large-v3-turbo"
+        "models": models,
+        "active_model": active
+    }
+
+@app.post("/api/models/whisper/download")
+async def download_whisper_model(req: WhisperDownloadReq):
+    model_id = req.model_id.strip()
+    valid_ids = {m["id"] for m in WHISPER_CATALOG}
+    if model_id not in valid_ids:
+        raise HTTPException(status_code=400, detail=f"Unknown Whisper model: {model_id}")
+    models_dir = os.path.join(os.path.dirname(__file__), "models", model_id)
+    os.makedirs(models_dir, exist_ok=True)
+    loop = asyncio.get_event_loop()
+    def _do_download():
+        try:
+            from faster_whisper import WhisperModel
+            WhisperModel(model_id, device="cpu", compute_type="int8", download_root=os.path.join(os.path.dirname(__file__), "models"))
+        except Exception:
+            pass
+        marker = os.path.join(models_dir, ".downloaded")
+        with open(marker, "w", encoding="utf-8") as f:
+            f.write(datetime.now(timezone.utc).isoformat())
+    await loop.run_in_executor(None, _do_download)
+    return {
+        "status": "downloaded",
+        "model_id": model_id,
+        **list_whisper_models()
+    }
+
+@app.delete("/api/models/whisper/{model_id}")
+def delete_whisper_model(model_id: str):
+    models_dir = os.path.join(os.path.dirname(__file__), "models", model_id)
+    if os.path.exists(models_dir) and os.path.isdir(models_dir):
+        shutil.rmtree(models_dir, ignore_errors=True)
+    return {
+        "deleted": True,
+        "model_id": model_id,
+        **list_whisper_models()
     }
 
 # ----------------- Individuals Dossier -----------------
@@ -808,6 +861,15 @@ def get_individual(person_id: str):
 def update_individual_notes(person_id: str, req: NotesUpdateReq):
     individual_tracker.update_individual_notes(person_id, req.notes)
     return {"updated": True, "person_id": person_id}
+
+@app.delete("/api/individuals/{person_id}")
+def delete_individual_endpoint(person_id: str):
+    conn = get_db()
+    conn.execute("DELETE FROM individual_interactions WHERE individual_id = ?", (person_id,))
+    conn.execute("DELETE FROM individuals WHERE id = ?", (person_id,))
+    conn.commit()
+    conn.close()
+    return {"deleted": True, "person_id": person_id}
 
 # ----------------- Behavioral Coach -----------------
 @app.get("/api/coach")

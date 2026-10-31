@@ -45,7 +45,6 @@ export default function MeetingsIndexPage() {
   }, [meetings, query]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this session, its audio and its notes?")) return;
     await api.deleteMeeting(id);
     refresh();
   };

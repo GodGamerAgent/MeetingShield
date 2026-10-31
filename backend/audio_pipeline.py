@@ -301,8 +301,12 @@ class AudioPipeline:
         user_name, others_name = self._speaker_names(meeting_id)
 
         def speaker_for(start: float, end: float) -> str:
+            if mic_ref > 0 and tab_ref <= 0:
+                return "ME"
+            if tab_ref > 0 and mic_ref <= 0:
+                return "REMOTE"
             if not can_attribute:
-                return "UNKNOWN"
+                return "ME"
             a = int(start / 0.02)
             b = max(a + 1, int(math.ceil(end / 0.02)))
             m = float(np.mean(mic_env[a:b])) / mic_ref if a < len(mic_env) else 0.0

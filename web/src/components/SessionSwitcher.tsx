@@ -76,7 +76,6 @@ export default function SessionSwitcher({ currentMeetingId, onSelectMeeting }: S
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!confirm("Are you sure you want to delete this session?")) return;
     try {
       await api.deleteMeeting(id);
       await loadMeetings();
@@ -126,8 +125,9 @@ export default function SessionSwitcher({ currentMeetingId, onSelectMeeting }: S
     <div className="relative" ref={dropdownRef}>
       {/* Active Session Button / Pill */}
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-aura-pastel bg-white hover:bg-aura-mist/60 text-xs font-semibold text-aura-charcoal transition-all shadow-xs"
+        className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-aura-pastel bg-white hover:bg-aura-mist/60 text-xs font-semibold text-aura-charcoal btn-3d-light"
         title="Switch between recorded sessions"
       >
         <div className="w-2 h-2 rounded-full bg-aura-coral flex-shrink-0" />
@@ -144,7 +144,7 @@ export default function SessionSwitcher({ currentMeetingId, onSelectMeeting }: S
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute left-0 top-full mt-2 w-80 sm:w-96 rounded-2xl bg-white backdrop-blur-2xl border border-aura-pastel shadow-2xl ring-1 ring-aura-peach/30 p-3 z-[999] animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute left-0 top-full mt-2 w-80 sm:w-96 rounded-2xl bg-white backdrop-blur-2xl border border-aura-pastel shadow-2xl ring-1 ring-aura-peach/30 p-3 z-[999]">
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-aura-border">
             <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-aura-charcoal">
               <Layers className="w-3.5 h-3.5 text-aura-coral" />
@@ -206,8 +206,9 @@ export default function SessionSwitcher({ currentMeetingId, onSelectMeeting }: S
                     </div>
 
                     <button
+                      type="button"
                       onClick={(e) => handleDelete(e, m.id)}
-                      className="p-1 rounded-lg text-aura-slate hover:text-rose-600 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="p-1.5 rounded-lg text-aura-slate hover:text-rose-600 hover:bg-rose-50 transition-colors"
                       title="Delete Session"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

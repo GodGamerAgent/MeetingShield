@@ -94,7 +94,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
 });
 
 function isMeetingUrl(url) {
-  return /^https:\/\/(meet\.google\.com|[\w.-]*zoom\.us|teams\.microsoft\.com|teams\.live\.com)\//.test(url || "");
+  return /^https:\/\/(meet\.google\.com|[\w.-]*zoom\.us|teams\.microsoft\.com|teams\.live\.com|teams\.cloud\.microsoft)\//.test(url || "");
 }
 
 // ----------------- Messages -----------------
@@ -167,12 +167,16 @@ async function handleMeetingState(message, tab) {
   const tabId = tab.id;
   const state = await getState();
   const wasDetected = Boolean(state.detected[tabId]);
+  const incomingAttendees = Array.isArray(message.attendees) ? message.attendees : [];
 
   if (message.inCall) {
     await setState((s) => {
+      const prevAttendees = s.detected[tabId]?.attendees || [];
+      const mergedAttendees = Array.from(new Set([...prevAttendees, ...incomingAttendees]));
       s.detected[tabId] = {
         platform: message.platform,
         title: message.title,
+        attendees: mergedAttendees,
         url: message.url,
         since: s.detected[tabId]?.since || Date.now(),
       };
@@ -180,10 +184,20 @@ async function handleMeetingState(message, tab) {
         s.recording.title = message.title;
       }
     });
+
+    // Sync attendees and title with active backend session if recording
+    const updatedState = await getState();
+    if (updatedState.recording && updatedState.recording.tabId === tabId && incomingAttendees.length > 0) {
+      fetch(`${BACKEND}/api/meetings/${updatedState.recording.meetingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attendees: updatedState.detected[tabId]?.attendees || incomingAttendees }),
+      }).catch(() => {});
+    }
+
     if (!wasDetected && !state.recording) {
       const settings = await getSettings();
       if (settings.autoRecord) {
-        // Works when the user has already clicked the AURA icon on this tab; otherwise the page shows a one-click prompt.
         const res = await startRecording(tabId, "auto");
         return { ok: true, autoStarted: res.ok, needsInvocation: res.needsInvocation };
       }
@@ -228,6 +242,7 @@ async function doStart(tabId, source, titleOverride) {
   const detected = state.detected[tabId];
   const platform = detected?.platform || platformFromUrl(tab.url);
   const title = titleOverride || detected?.title || defaultTitle(platform);
+  const attendees = detected?.attendees || [];
 
   // 1. Tab audio stream id (requires the extension to have been invoked on this tab)
   let streamId;
@@ -249,7 +264,7 @@ async function doStart(tabId, source, titleOverride) {
     const res = await fetch(`${BACKEND}/api/meetings`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, platform, meeting_url: tab.url, attendees: [], status: "recording" }),
+      body: JSON.stringify({ title, platform, meeting_url: tab.url, attendees, status: "recording" }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     meeting = await res.json();

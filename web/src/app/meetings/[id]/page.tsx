@@ -5,13 +5,14 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   FileText, CheckSquare, Bookmark, Calendar, Clock, Sparkles, Check, ShieldCheck, XCircle,
-  Mail, FileDown, Loader2, AlertTriangle, RotateCw, Users, Edit3, ArrowLeft, Lightbulb, Layers,
+  Mail, FileDown, Loader2, AlertTriangle, RotateCw, Users, Edit3, ArrowLeft, Lightbulb, Layers, Trash2, CheckCircle2,
 } from "lucide-react";
 import { api, Meeting, TodoItem, MemoryCard, TranscriptSegment, DominanceData, CoachingCard } from "@/lib/api";
 import { useLiveEvents } from "@/lib/useLiveEvents";
 import CalendarModal from "@/components/CalendarModal";
 import LiveNotesPad from "@/components/LiveNotesPad";
 import FollowUpDrafterModal from "@/components/FollowUpDrafterModal";
+import NotesMarkdownModal from "@/components/NotesMarkdownModal";
 import MeetingChatbot from "@/components/MeetingChatbot";
 import DominanceChart from "@/components/DominanceChart";
 import { StatusBadge, formatDuration } from "@/components/SessionList";
@@ -50,9 +51,11 @@ export default function MeetingDetailPage() {
   const [synthesizing, setSynthesizing] = useState(false);
   const [ownerFilter, setOwnerFilter] = useState("ALL");
   const [isFollowupOpen, setIsFollowupOpen] = useState(false);
+  const [isMarkdownOpen, setIsMarkdownOpen] = useState(false);
   const [calTask, setCalTask] = useState<{ title: string; deadline?: string; description?: string } | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
+  const [actionBanner, setActionBanner] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const loadAll = useCallback(async () => {
@@ -97,18 +100,32 @@ export default function MeetingDetailPage() {
   });
 
   const handleProcess = async () => {
-    setProgress({ progress: 2, message: "Starting…" });
+    setProgress({ progress: 25, message: "Transcribing audio, updating Coach & People Dossiers…" });
     setMeeting((m) => (m ? { ...m, status: "processing", processing_error: "" } : m));
-    await api.processMeeting(meetingId);
+    try {
+      await api.processMeeting(meetingId);
+      setActionBanner("Session processed! Transcript, Executive Summary, Personal Communication Coach, and Individual Dossiers updated.");
+      setTimeout(() => setActionBanner(null), 5000);
+    } finally {
+      setProgress(null);
+      await loadAll();
+    }
   };
 
   const handleResynthesize = async () => {
     setSynthesizing(true);
     try {
       setAnalysis(await api.generateAnalysis(meetingId));
+      setActionBanner("Re-summarized session and updated Behavioral Coach & Individual Dossiers!");
+      setTimeout(() => setActionBanner(null), 5000);
     } finally {
       setSynthesizing(false);
     }
+  };
+
+  const handleDeleteSession = async () => {
+    await api.deleteMeeting(meetingId);
+    router.push("/meetings");
   };
 
   const handleSaveTitle = async () => {
@@ -181,9 +198,20 @@ export default function MeetingDetailPage() {
 
   return (
     <div className="space-y-6">
+      {actionBanner && (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-900 flex items-center gap-2 pop-hover">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+          <span>{actionBanner}</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className={card}>
-        <button onClick={() => router.push("/meetings")} className="flex items-center gap-1 text-[11px] font-semibold text-aura-slate hover:text-aura-coral mb-3">
+        <button
+          type="button"
+          onClick={() => router.push("/meetings")}
+          className="inline-flex items-center gap-1 text-[11px] font-semibold text-aura-slate hover:text-aura-coral mb-3 cursor-pointer"
+        >
           <ArrowLeft className="w-3 h-3" /> Sessions
         </button>
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
@@ -205,33 +233,56 @@ export default function MeetingDetailPage() {
             ) : (
               <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold text-aura-charcoal tracking-tight flex items-center gap-2 group">
                 <span className="truncate">{meeting.title}</span>
-                <button onClick={() => setEditingTitle(true)} className="opacity-40 group-hover:opacity-100 text-aura-slate hover:text-aura-coral" title="Rename">
+                <button
+                  type="button"
+                  onClick={() => setEditingTitle(true)}
+                  className="p-1 rounded-lg opacity-70 hover:opacity-100 text-aura-slate hover:text-aura-coral hover:bg-aura-mist"
+                  title="Rename session"
+                >
                   <Edit3 className="w-4 h-4" />
                 </button>
               </h1>
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 relative z-10">
             {!isRecording && meeting.has_audio && (
               <button
+                type="button"
                 onClick={handleProcess}
                 disabled={isProcessing}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-aura-peach to-aura-coral shadow-peach-sm disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-aura-peach to-aura-coral btn-3d disabled:opacity-50"
                 title="Re-run transcription and AI synthesis"
               >
                 {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCw className="w-3.5 h-3.5" />}
                 {hasTranscript ? "Re-process" : "Process"}
               </button>
             )}
-            <button onClick={() => setIsFollowupOpen(true)} disabled={!analysis?.has_analysis}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white text-aura-charcoal border border-aura-pastel hover:bg-aura-mist disabled:opacity-50">
+            <button
+              type="button"
+              onClick={() => setIsFollowupOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white text-aura-charcoal border border-aura-pastel hover:bg-aura-mist btn-3d-light"
+            >
               <Mail className="w-3.5 h-3.5 text-aura-coral" /> Follow-up
             </button>
-            <a href={api.getMarkdownDownloadUrl(meetingId)} download
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white text-aura-charcoal border border-aura-pastel hover:bg-aura-mist">
-              <FileDown className="w-3.5 h-3.5 text-aura-coral" /> Notes .md
-            </a>
+            <button
+              type="button"
+              onClick={() => setIsMarkdownOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white text-aura-charcoal border border-aura-pastel hover:bg-aura-mist btn-3d-light"
+              title="Open GitHub & Obsidian Markdown Viewer"
+            >
+              <FileText className="w-3.5 h-3.5 text-aura-coral" /> Notes .md
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteSession}
+              aria-label="Delete session"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 btn-3d-light"
+              title="Delete session and remove storage files"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete</span>
+            </button>
           </div>
         </div>
 
@@ -363,33 +414,52 @@ export default function MeetingDetailPage() {
       )}
 
       {/* Transcript + Chat */}
-      {hasTranscript && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <div className={`lg:col-span-7 ${card} flex flex-col h-[640px]`}>
-            <SectionTitle icon={<Clock className="w-4 h-4" />} title={`Transcript (${transcript.length})`}>
-              <span className="text-[10.5px] text-aura-slate">Click a time to play from there</span>
-            </SectionTitle>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className={`lg:col-span-7 ${card} flex flex-col h-[640px]`}>
+          <SectionTitle icon={<Clock className="w-4 h-4" />} title={`Transcript (${transcript.length})`}>
+            <span className="text-[10.5px] text-aura-slate">Click a time to play from there</span>
+          </SectionTitle>
+          {hasTranscript ? (
             <div className="flex-1 overflow-y-auto mt-3 space-y-2.5 pr-1">
               {transcript.map((seg) => (
                 <TranscriptRow key={seg.id} seg={seg} options={speakerOptions} onJump={jumpTo} onRename={handleRename} />
               ))}
             </div>
-          </div>
-          <div className="lg:col-span-5 space-y-6">
-            {dominance && dominance.speakers.length > 0 && (
-              <div className={card}>
-                <DominanceChart dominanceData={dominance} />
-              </div>
-            )}
-            <div className="h-[520px]">
-              <MeetingChatbot meetingId={meetingId} onCitationClick={jumpTo} />
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-xs text-aura-slate space-y-3">
+              <Clock className="w-8 h-8 text-aura-coral/70" />
+              <p className="font-bold text-aura-charcoal text-sm">No Transcript Generated Yet</p>
+              <p className="max-w-sm leading-relaxed">
+                Click <strong>Process</strong> above (or <strong>Stop &amp; process</strong> if recording) to run Faster-Whisper ASR and generate speaker-attributed transcript segments.
+              </p>
             </div>
+          )}
+        </div>
+        <div className="lg:col-span-5 space-y-6">
+          {dominance && dominance.speakers.length > 0 && (
+            <div className={card}>
+              <DominanceChart dominanceData={dominance} />
+            </div>
+          )}
+          <div className="h-[560px]">
+            <MeetingChatbot
+              meetingId={meetingId}
+              meetingTitle={meeting.title}
+              attendees={meeting.attendees}
+              onCitationClick={jumpTo}
+            />
           </div>
         </div>
-      )}
+      </div>
 
       {/* Notes */}
-      <LiveNotesPad meetingId={meetingId} initialRawNotes={meeting.raw_notes} initialEnhancedNotes={meeting.enhanced_notes} folderPath={meeting.folder_path} />
+      <LiveNotesPad
+        meetingId={meetingId}
+        initialRawNotes={meeting.raw_notes}
+        initialEnhancedNotes={meeting.enhanced_notes}
+        folderPath={meeting.folder_path}
+        onOpenMarkdown={() => setIsMarkdownOpen(true)}
+      />
 
       {/* Things to remember */}
       {(analysis?.things_to_remember || []).length > 0 && (
@@ -434,6 +504,13 @@ export default function MeetingDetailPage() {
 
       <CalendarModal isOpen={Boolean(calTask)} onClose={() => setCalTask(null)} taskTitle={calTask?.title || ""} deadline={calTask?.deadline} description={calTask?.description} />
       <FollowUpDrafterModal meetingId={meetingId} meetingTitle={meeting.title} isOpen={isFollowupOpen} onClose={() => setIsFollowupOpen(false)} />
+      <NotesMarkdownModal
+        meetingId={meetingId}
+        meetingTitle={meeting.title}
+        isOpen={isMarkdownOpen}
+        onClose={() => setIsMarkdownOpen(false)}
+        onCitationClick={jumpTo}
+      />
     </div>
   );
 }

@@ -18,13 +18,15 @@ interface LiveNotesPadProps {
   initialRawNotes?: string;
   initialEnhancedNotes?: string;
   folderPath?: string;
+  onOpenMarkdown?: () => void;
 }
 
 export default function LiveNotesPad({
   meetingId,
   initialRawNotes = "",
   initialEnhancedNotes = "",
-  folderPath = ""
+  folderPath = "",
+  onOpenMarkdown,
 }: LiveNotesPadProps) {
   const [activeTab, setActiveTab] = useState<"raw" | "enhanced">("raw");
   const [rawNotes, setRawNotes] = useState(initialRawNotes);
@@ -34,6 +36,7 @@ export default function LiveNotesPad({
   const [enhancing, setEnhancing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [localFolder, setLocalFolder] = useState(folderPath);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -97,20 +100,20 @@ export default function LiveNotesPad({
   const handleEnhance = async () => {
     if (!meetingId) return;
     setEnhancing(true);
+    setNotice(null);
     try {
-      // First save current raw notes
       await api.saveRawNotes(meetingId, rawNotes);
       const res = await api.enhanceNotes(meetingId, rawNotes);
       if (res.status === "llm_offline") {
-        alert("LM Studio is offline. Start it and try again — your notes are saved.");
+        setNotice("LM Studio is offline. Start it and try again — your notes are saved.");
       } else if (res.status === "no_transcript") {
-        alert("This session has no transcript yet. Process the meeting first, then enhance your notes.");
+        setNotice("This session has no transcript yet. Process the meeting first, then enhance your notes.");
       } else {
         setEnhancedNotes(res.enhanced_notes);
         setActiveTab("enhanced");
       }
     } catch (err) {
-      alert("Note enhancement notice: " + (err as Error).message);
+      setNotice("Note enhancement notice: " + (err as Error).message);
     } finally {
       setEnhancing(false);
     }
@@ -250,23 +253,29 @@ export default function LiveNotesPad({
         </div>
       )}
 
+      {notice && (
+        <div className="px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 font-medium">
+          {notice}
+        </div>
+      )}
+
       {/* Per-meeting Folder Disk Location Badge */}
       {meetingId && (
         <div className="pt-2 border-t border-aura-border/60 flex flex-wrap items-center justify-between text-[11px] text-aura-slate gap-2">
           <span className="flex items-center gap-1.5 font-medium">
             <FolderOpen className="w-3.5 h-3.5 text-aura-coral flex-shrink-0" />
             <span className="truncate max-w-xs sm:max-w-md">
-              Folder: <code className="text-aura-charcoal bg-aura-mist px-1.5 py-0.5 rounded font-mono text-[10.5px]">{localFolder || `recordings/${meetingId}`}</code>
+              Folder: <code className="text-aura-charcoal bg-aura-mist px-1.5 py-0.5 rounded font-mono text-[10.5px]">{localFolder || `/tmp/aura-recordings/${meetingId}`}</code>
             </span>
           </span>
-          <a
-            href={api.getMarkdownDownloadUrl(meetingId)}
-            download
+          <button
+            type="button"
+            onClick={() => onOpenMarkdown?.()}
             className="font-bold text-aura-coral hover:underline flex items-center gap-1 text-[11px]"
           >
-            <FileDown className="w-3 h-3" />
-            <span>meeting_notes.md</span>
-          </a>
+            <Layers className="w-3 h-3" />
+            <span>Open meeting_notes.md (GitHub &amp; Obsidian Viewer)</span>
+          </button>
         </div>
       )}
     </div>

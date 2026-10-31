@@ -11,37 +11,84 @@
 
   const PLATFORMS = {
     meet: {
-      match: () => location.hostname === "meet.google.com" && /^\/[a-z]{3,4}-[a-z]{3,4}-[a-z]{3,4}/i.test(location.pathname),
-      inCall: () => Boolean(
-        document.querySelector('[jsname="CQylAd"], button[aria-label*="Leave call" i], button[aria-label*="leave call" i]')
-      ),
+      match: () =>
+        location.hostname === "meet.google.com" &&
+        (/^\/[a-z]{3,4}-[a-z]{3,4}-[a-z]{3,4}/i.test(location.pathname) ||
+          location.pathname.startsWith("/lookup/")),
+      inCall: () => {
+        const hasLeaveBtn = Boolean(
+          document.querySelector(
+            '[jsname="CQylAd"], button[aria-label*="Leave call" i], button[aria-label*="leave call" i], button[data-tooltip*="Leave call" i]'
+          )
+        );
+        const hasParticipantTiles =
+          document.querySelectorAll("[data-participant-id], [data-self-name], [data-requested-participant-id]").length > 0;
+        const inLobby = Boolean(
+          document.querySelector(
+            'button[jsname="Qx7uuf"], button[aria-label*="Join now" i], button[aria-label*="Ask to join" i]'
+          )
+        );
+        return hasLeaveBtn || (hasParticipantTiles && !inLobby);
+      },
       title: () => {
-        const el = document.querySelector("[data-meeting-title]");
+        const el = document.querySelector("[data-meeting-title], [data-call-title]");
         const t = el?.getAttribute("data-meeting-title") || el?.textContent;
         if (t && t.trim()) return t.trim();
         const code = location.pathname.split("/")[1];
         const docTitle = document.title.replace(/^Meet\s*[-–:]\s*/i, "").trim();
         return docTitle && docTitle !== "Meet" && docTitle !== code ? docTitle : `Google Meet · ${code}`;
       },
+      attendees: () => {
+        const names = new Set();
+        document.querySelectorAll("[data-self-name], [data-participant-id] [ class*='zWGUib' ], [data-participant-id] span").forEach((el) => {
+          const val = (el.getAttribute("data-self-name") || el.textContent || "").trim();
+          if (val && val.length > 1 && val.length < 50 && !/^(you|mute|unmute|pin|more|presentation)$/i.test(val)) {
+            names.add(val);
+          }
+        });
+        return Array.from(names).slice(0, 12);
+      },
     },
     zoom: {
-      match: () => /zoom\.us$/.test(location.hostname) && /\/(wc|j)\//.test(location.pathname),
-      inCall: () => Boolean(
-        document.querySelector('.footer__leave-btn, button[aria-label="Leave"], button[aria-label*="Leave meeting" i], button[aria-label*="End meeting" i]')
-      ),
+      match: () => /zoom\.us$/.test(location.hostname) && /\/(wc|j|s)\//.test(location.pathname),
+      inCall: () =>
+        Boolean(
+          document.querySelector(
+            '.footer__leave-btn, button[aria-label="Leave"], button[aria-label*="Leave meeting" i], button[aria-label*="End meeting" i], #wc-footer, canvas#video-canvas, .meeting-client-inner'
+          )
+        ),
       title: () => {
-        const t = document.querySelector(".meeting-info-container__header, .meeting-title")?.textContent?.trim();
-        return t || "Zoom meeting";
+        const t = document.querySelector(".meeting-info-container__header, .meeting-title, .meeting-topic")?.textContent?.trim();
+        return t || document.title.replace(/\s*-\s*Zoom.*$/i, "").trim() || "Zoom meeting";
+      },
+      attendees: () => {
+        const names = new Set();
+        document.querySelectorAll(".participants-item__display-name, .video-avatar__avatar-name").forEach((el) => {
+          const val = (el.textContent || "").trim();
+          if (val && val.length > 1 && val.length < 50) names.add(val);
+        });
+        return Array.from(names).slice(0, 12);
       },
     },
     teams: {
-      match: () => /teams\.(microsoft|live)\.com$/.test(location.hostname),
-      inCall: () => Boolean(
-        document.querySelector('#hangup-button, [data-tid="hangup-main-btn"], [data-tid="call-hangup"], button[aria-label^="Leave" i][id*="hangup" i]')
-      ),
+      match: () => /(teams\.(microsoft|live)\.com|teams\.cloud\.microsoft)$/.test(location.hostname),
+      inCall: () =>
+        Boolean(
+          document.querySelector(
+            '#hangup-button, [data-tid="hangup-main-btn"], [data-tid="hangup-button"], [data-tid="call-hangup"], button[aria-label*="Leave" i], button[aria-label*="Hang up" i]'
+          )
+        ),
       title: () => {
         const t = document.querySelector('[data-tid="call-title"], [data-tid="meeting-title"]')?.textContent?.trim();
         return t || document.title.replace(/\s*\|\s*Microsoft Teams.*$/i, "").trim() || "Teams meeting";
+      },
+      attendees: () => {
+        const names = new Set();
+        document.querySelectorAll('[data-tid="roster-participant"] span, [data-tid*="participant"] span').forEach((el) => {
+          const val = (el.textContent || "").trim();
+          if (val && val.length > 1 && val.length < 50) names.add(val);
+        });
+        return Array.from(names).slice(0, 12);
       },
     },
   };
@@ -74,8 +121,8 @@
       }
     } else {
       streak = 0;
-      // Keep the title fresh (Meet fills it in after join)
-      if (inCall && Date.now() - lastReport > 15000) report();
+      // Keep the title and attendees fresh (Meet fills them in after join)
+      if (inCall && Date.now() - lastReport > 10000) report();
     }
   }
 
@@ -88,6 +135,7 @@
       inCall: reportedInCall,
       platform: platformKey,
       title: p ? safe(p.title) : "",
+      attendees: p && p.attendees ? safe(p.attendees) || [] : [],
       url: location.href,
     }).catch(() => {});
   }

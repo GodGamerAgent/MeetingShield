@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -10,9 +10,11 @@ import {
   Users,
   Settings,
   Sparkles,
-  ShieldAlert,
-  CalendarCheck
+  Download,
+  Puzzle,
+  CheckCircle2,
 } from "lucide-react";
+import { api } from "@/lib/api";
 
 const NAV_ITEMS: { href: string; label: string; icon: typeof Radio; badge?: string }[] = [
   { href: "/", label: "Home", icon: Radio },
@@ -24,15 +26,24 @@ const NAV_ITEMS: { href: string; label: string; icon: typeof Radio; badge?: stri
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [downloaded, setDownloaded] = useState(false);
+
+  const handleDownloadExtension = () => {
+    setDownloaded(true);
+    setTimeout(() => setDownloaded(false), 4500);
+  };
 
   return (
-    <aside className="fixed left-4 top-4 bottom-4 w-64 hidden lg:flex flex-col rounded-3xl bg-white/85 backdrop-blur-xl border border-aura-pastel/80 shadow-peach-md p-4 z-40 justify-between">
+    <aside
+      style={{ position: "fixed" }}
+      className="fixed left-4 top-4 bottom-4 w-64 h-[calc(100vh-2rem)] hidden lg:flex flex-col rounded-3xl bg-white/95 backdrop-blur-xl border border-aura-pastel/80 p-4 z-40 justify-between overflow-y-auto no-scrollbar card-3d"
+    >
       <div>
         {/* Brand Header */}
         <div className="flex items-center gap-3 px-2 py-3 mb-6 border-b border-aura-border">
-          <div className="relative w-9 h-9 rounded-2xl bg-gradient-to-tr from-aura-peach via-aura-coral to-amber-300 p-0.5 shadow-peach-sm flex items-center justify-center">
+          <div className="relative w-9 h-9 rounded-2xl bg-gradient-to-tr from-aura-peach via-aura-coral to-amber-300 p-0.5 shadow-peach-sm flex items-center justify-center pop-hover">
             <div className="w-full h-full rounded-[14px] bg-white flex items-center justify-center">
-              <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-aura-peach to-aura-coral animate-pulse-slow" />
+              <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-aura-peach to-aura-coral" />
             </div>
           </div>
           <div>
@@ -48,7 +59,7 @@ export default function Sidebar() {
         </div>
 
         {/* Navigation Links */}
-        <nav className="space-y-1.5">
+        <nav className="space-y-2">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive =
@@ -62,8 +73,8 @@ export default function Sidebar() {
                 href={item.href}
                 className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all duration-200 group ${
                   isActive
-                    ? "bg-gradient-to-r from-aura-peach to-aura-coral text-white shadow-peach-sm translate-x-1"
-                    : "text-aura-slate hover:text-aura-charcoal hover:bg-aura-mist/80"
+                    ? "bg-gradient-to-r from-aura-peach to-aura-coral text-white btn-3d translate-x-1"
+                    : "text-aura-slate hover:text-aura-charcoal hover:bg-aura-mist/80 pop-hover"
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -91,21 +102,48 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      {/* Extension Link Card */}
-      <div className="p-3.5 rounded-2xl bg-gradient-to-br from-aura-mist to-white border border-aura-pastel/80 text-xs shadow-xs">
-        <div className="flex items-center gap-2 mb-1.5 text-aura-coral font-bold text-[11px] uppercase tracking-wider">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Chrome Extension</span>
+      {/* Extension Download & Setup Card in Left Bar */}
+      <div className="p-3.5 rounded-2xl bg-gradient-to-br from-aura-mist via-white to-amber-50/40 border border-aura-pastel/90 text-xs pop-hover space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-aura-coral font-extrabold text-[11px] uppercase tracking-wider">
+            <Puzzle className="w-3.5 h-3.5" />
+            <span>Chrome Extension</span>
+          </div>
+          <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+            Required
+          </span>
         </div>
-        <p className="text-[11px] text-aura-slate leading-relaxed mb-2.5 font-medium">
-          Load <code className="bg-white px-1 py-0.5 rounded text-[10px] text-aura-charcoal border border-aura-pastel">/extension</code> in <code className="text-[10px]">chrome://extensions</code> — it detects Meet, Zoom &amp; Teams calls and records each one as a session.
+
+        <p className="text-[11px] text-aura-slate leading-relaxed font-medium">
+          Add the extension in <code className="bg-white px-1 py-0.5 rounded text-[10px] text-aura-charcoal border border-aura-pastel">chrome://extensions</code> (Load unpacked) to auto-detect &amp; record Meet, Zoom &amp; Teams calls.
         </p>
-        <div className="flex items-center justify-between pt-2 border-t border-aura-border/70 text-[10.5px]">
+
+        <a
+          href={api.getExtensionDownloadUrl()}
+          download="aura-meet-chrome-extension.zip"
+          onClick={handleDownloadExtension}
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-bold text-white bg-gradient-to-r from-aura-peach to-aura-coral btn-3d"
+          title="Download AURA-MEET Chrome Extension (.zip)"
+        >
+          {downloaded ? (
+            <>
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Downloaded (.zip)!</span>
+            </>
+          ) : (
+            <>
+              <Download className="w-3.5 h-3.5" />
+              <span>Download Extension (.zip)</span>
+            </>
+          )}
+        </a>
+
+        <div className="flex items-center justify-between pt-1.5 border-t border-aura-border/70 text-[10px]">
           <span className="text-emerald-600 font-semibold flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             Manifest V3 Ready
           </span>
-          <span className="text-aura-slate">FastAPI :8000</span>
+          <span className="text-aura-slate font-mono">16kHz Stereo</span>
         </div>
       </div>
     </aside>

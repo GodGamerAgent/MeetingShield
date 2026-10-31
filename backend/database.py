@@ -198,8 +198,11 @@ def init_db():
     print("[Database] Initialized empty schema successfully.")
 
 def clear_all_data():
+    import shutil
+    from config_store import config_store
     conn = get_db()
     cur = conn.cursor()
+    meeting_ids = [r["id"] for r in cur.execute("SELECT id FROM meetings").fetchall()]
     cur.execute("DELETE FROM transcript_fts")
     cur.execute("DELETE FROM individual_interactions")
     cur.execute("DELETE FROM individuals")
@@ -212,7 +215,29 @@ def clear_all_data():
     cur.execute("DELETE FROM meetings")
     conn.commit()
     conn.close()
-    print("[Database] All data cleared.")
+
+    # Delete all session files in storage
+    try:
+        export_dir = config_store.get().audio_export_dir
+        for mid in meeting_ids:
+            mdir = os.path.join(export_dir, mid)
+            if os.path.isdir(mdir):
+                shutil.rmtree(mdir, ignore_errors=True)
+            wav_file = os.path.join(export_dir, f"{mid}.wav")
+            if os.path.exists(wav_file):
+                os.remove(wav_file)
+        if os.path.isdir(export_dir):
+            for entry in os.listdir(export_dir):
+                full_p = os.path.join(export_dir, entry)
+                if entry.startswith("meet-") or entry.startswith("demo-") or entry.endswith(".wav") or entry.endswith(".md"):
+                    if os.path.isdir(full_p):
+                        shutil.rmtree(full_p, ignore_errors=True)
+                    else:
+                        os.remove(full_p)
+    except Exception as e:
+        print(f"[Database] Storage cleanup notice: {e}")
+
+    print("[Database] All data and storage files cleared.")
 
 def seed_initial_data():
     conn = get_db()

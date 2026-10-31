@@ -1,0 +1,7 @@
+{
+  "name": "AURA-MEET",
+  "description": "On-Device Smart Meeting Intelligence, Granola-style Note Taking, and Behavioral Response Copilot powered by Gemma 4",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

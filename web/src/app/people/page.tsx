@@ -14,7 +14,8 @@ import {
   Calendar,
   Save,
   User,
-  ChevronRight
+  ChevronRight,
+  Trash2
 } from "lucide-react";
 import { api, IndividualProfile } from "@/lib/api";
 
@@ -63,6 +64,21 @@ export default function PeopleTrackerPage() {
       console.warn("Save note failed:", e);
     } finally {
       setSavingNotes(false);
+    }
+  };
+
+  const handleDeletePerson = async (personId: string) => {
+    try {
+      await api.deleteIndividual(personId);
+      const list = await api.getIndividuals();
+      setPeople(list);
+      if (list.length > 0) {
+        loadDossier(list[0].id);
+      } else {
+        setSelectedPerson(null);
+      }
+    } catch (e) {
+      console.warn("Delete individual failed:", e);
     }
   };
 
@@ -178,7 +194,7 @@ export default function PeopleTrackerPage() {
                   </div>
                 </div>
 
-                {/* Score Pills */}
+                {/* Score Pills & Delete Dossier */}
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-xl bg-aura-mist border border-aura-pastel text-center">
                     <span className="text-[10px] uppercase font-bold text-aura-slate block">Reliability</span>
@@ -188,6 +204,16 @@ export default function PeopleTrackerPage() {
                     <span className="text-[10px] uppercase font-bold text-aura-slate block">Total Meetings</span>
                     <span className="text-base font-extrabold text-aura-coral">{selectedPerson.total_meetings}</span>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDeletePerson(selectedPerson.id)}
+                    aria-label={`Delete dossier for ${selectedPerson.name}`}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 transition-colors"
+                    title="Delete individual dossier and storage record"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Dossier</span>
+                  </button>
                 </div>
               </div>
 

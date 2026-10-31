@@ -16,8 +16,10 @@
     "https://*.zoom.us/*",
     "https://teams.microsoft.com/*",
     "https://teams.live.com/*",
+    "https://teams.cloud.microsoft/*",
     "http://localhost:8000/*",
-    "http://127.0.0.1:8000/*"
+    "http://127.0.0.1:8000/*",
+    "http://localhost:3000/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -48,7 +50,8 @@
         "https://meet.google.com/*",
         "https://*.zoom.us/*",
         "https://teams.microsoft.com/*",
-        "https://teams.live.com/*"
+        "https://teams.live.com/*",
+        "https://teams.cloud.microsoft/*"
       ],
       "js": ["content.js"],
       "css": ["content.css"],

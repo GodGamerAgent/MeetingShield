@@ -1,5 +1,6 @@
-export const API_BASE = "http://localhost:8000";
-export const WS_BASE = "ws://localhost:8000";
+export const API_BASE = "";
+export const WS_BASE = "";
+
 
 export interface Meeting {
   id: string;
@@ -78,7 +79,20 @@ export interface WhisperModelInfo {
   size: string;
   status: string;
   ready: boolean;
+  downloaded?: boolean;
   recommended: boolean;
+  local_path?: string;
+}
+
+export interface DetectedCallInfo {
+  id: string;
+  platform: "meet" | "zoom" | "teams";
+  title: string;
+  meeting_url: string;
+  attendees: string[];
+  detected_at: string;
+  in_call: boolean;
+  recording_meeting_id?: string | null;
 }
 
 export interface DominanceData {
@@ -191,7 +205,7 @@ export const api = {
     if (!res.ok) throw new Error("Meeting not found");
     return res.json();
   },
-  async createMeeting(data: { title: string; agenda: string; attendees: string[] }): Promise<Meeting> {
+  async createMeeting(data: { title: string; agenda?: string; attendees?: string[]; platform?: string; meeting_url?: string; status?: string }): Promise<Meeting> {
     const res = await fetch(`${API_BASE}/api/meetings`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -277,6 +291,21 @@ export const api = {
     const res = await fetch(`${API_BASE}/api/models/whisper`, { cache: "no-store" });
     return res.json();
   },
+  async downloadWhisperModel(modelId: string): Promise<{ status: string; model_id: string; models: WhisperModelInfo[]; active_model: string }> {
+    const res = await fetch(`${API_BASE}/api/models/whisper/download`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model_id: modelId })
+    });
+    if (!res.ok) throw new Error("Failed to download Whisper model");
+    return res.json();
+  },
+  async deleteWhisperModel(modelId: string): Promise<{ deleted: boolean; model_id: string; models: WhisperModelInfo[]; active_model: string }> {
+    const res = await fetch(`${API_BASE}/api/models/whisper/${modelId}`, {
+      method: "DELETE"
+    });
+    return res.json();
+  },
   async toggleTodo(todoId: string) {
     const res = await fetch(`${API_BASE}/api/todos/${todoId}/toggle`, { method: "POST" });
     return res.json();
@@ -294,6 +323,12 @@ export const api = {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ notes })
+    });
+    return res.json();
+  },
+  async deleteIndividual(id: string) {
+    const res = await fetch(`${API_BASE}/api/individuals/${id}`, {
+      method: "DELETE"
     });
     return res.json();
   },
@@ -349,8 +384,38 @@ export const api = {
     });
     return res.json();
   },
-  async getMeetingMarkdown(meetingId: string) {
+  async getMeetingMarkdown(meetingId: string): Promise<{
+    meeting_id: string;
+    content: string;
+    file_path: string;
+    folder_path: string;
+  }> {
     const res = await fetch(`${API_BASE}/api/meetings/${meetingId}/markdown`, { cache: "no-store" });
+    return res.json();
+  },
+  async saveMeetingMarkdown(meetingId: string, content: string) {
+    const res = await fetch(`${API_BASE}/api/meetings/${meetingId}/markdown`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content })
+    });
+    return res.json();
+  },
+  async revealMeetingInFolder(meetingId: string, os?: "mac" | "win" | "linux"): Promise<{
+    status: string;
+    os: "mac" | "win" | "linux";
+    file_manager_name: string;
+    button_label: string;
+    command: string;
+    file_path: string;
+    folder_path: string;
+    message: string;
+  }> {
+    const res = await fetch(`${API_BASE}/api/meetings/${meetingId}/reveal-in-folder`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ os })
+    });
     return res.json();
   },
   getMarkdownDownloadUrl(meetingId: string): string {
@@ -363,5 +428,43 @@ export const api = {
   async globalSearch(query: string): Promise<GlobalSearchResult> {
     const res = await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(query)}`, { cache: "no-store" });
     return res.json();
+  },
+  async getDetectionStatus(): Promise<{
+    auto_detect_enabled: boolean;
+    auto_record_enabled: boolean;
+    detected_calls: DetectedCallInfo[];
+    storage_stats: { directory: string; total_files: number; session_folders: string[] };
+  }> {
+    const res = await fetch(`${API_BASE}/api/detection/status`, { cache: "no-store" });
+    return res.json();
+  },
+  async simulateMeetingDetection(data?: {
+    platform?: "meet" | "zoom" | "teams";
+    title?: string;
+    attendees?: string[];
+    auto_start_recording?: boolean;
+  }) {
+    const res = await fetch(`${API_BASE}/api/detection/simulate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data || {})
+    });
+    return res.json();
+  },
+  async updateDetectionSettings(data: { auto_detect_enabled?: boolean; auto_record_enabled?: boolean }) {
+    const res = await fetch(`${API_BASE}/api/detection/settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+  async restoreDemoSessions() {
+    const res = await fetch(`${API_BASE}/api/meetings/restore-demo`, { method: "POST" });
+    return res.json();
+  },
+  getExtensionDownloadUrl(): string {
+    return `${API_BASE}/api/extension/download`;
   }
 };
+

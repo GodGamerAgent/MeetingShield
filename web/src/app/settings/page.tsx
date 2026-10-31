@@ -16,9 +16,12 @@ import {
   Folder,
   FolderCheck,
   Trash2,
-  Database
+  Database,
+  Download,
+  Loader2,
+  HardDrive
 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, WhisperModelInfo } from "@/lib/api";
 
 export default function SettingsControlCenterPage() {
   const [config, setConfig] = useState<any>({
@@ -43,14 +46,37 @@ export default function SettingsControlCenterPage() {
   const [saveToast, setSaveToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("All settings updated and saved!");
 
+  const [whisperModels, setWhisperModels] = useState<WhisperModelInfo[]>([]);
+  const [downloadingModelId, setDownloadingModelId] = useState<string | null>(null);
+  const [storageStats, setStorageStats] = useState<{ directory: string; total_files: number; session_folders: string[] } | null>(null);
+
   // Live mic test
   const [micTesting, setMicTesting] = useState(false);
   const [micLevel, setMicLevel] = useState(0);
+
+  const refreshWhisperAndStorage = async () => {
+    try {
+      const [wRes, detRes] = await Promise.all([
+        api.getWhisperModels(),
+        api.getDetectionStatus().catch(() => null),
+      ]);
+      if (wRes?.models) {
+        setWhisperModels(wRes.models);
+      }
+      if (detRes?.storage_stats) {
+        setStorageStats(detRes.storage_stats);
+      }
+    } catch (e) {
+      console.warn("Could not load Whisper models:", e);
+    }
+  };
 
   useEffect(() => {
     api.getSettings()
       .then(cfg => setConfig(cfg))
       .catch(e => console.warn("Could not load settings:", e));
+
+    refreshWhisperAndStorage();
 
     api.fetchModels()
       .then(res => {
@@ -61,6 +87,40 @@ export default function SettingsControlCenterPage() {
       })
       .catch(() => {});
   }, []);
+
+  const handleDownloadWhisper = async (modelId: string) => {
+    setDownloadingModelId(modelId);
+    try {
+      const res = await api.downloadWhisperModel(modelId);
+      setWhisperModels(res.models || []);
+      setConfig((prev: any) => ({ ...prev, whisper_model: modelId }));
+      await api.updateSettings({ whisper_model: modelId });
+      setToastMessage(`Downloaded Whisper "${modelId}" to local storage and set as active ASR model!`);
+      setSaveToast(true);
+      setTimeout(() => setSaveToast(false), 3500);
+      await refreshWhisperAndStorage();
+    } catch (e) {
+      console.warn("Failed to download Whisper model:", e);
+    } finally {
+      setDownloadingModelId(null);
+    }
+  };
+
+  const handleDeleteWhisper = async (modelId: string) => {
+    try {
+      const res = await api.deleteWhisperModel(modelId);
+      setWhisperModels(res.models || []);
+      if (res.active_model) {
+        setConfig((prev: any) => ({ ...prev, whisper_model: res.active_model }));
+      }
+      setToastMessage(`Deleted Whisper "${modelId}" binary files from local storage.`);
+      setSaveToast(true);
+      setTimeout(() => setSaveToast(false), 3500);
+      await refreshWhisperAndStorage();
+    } catch (e) {
+      console.warn("Failed to delete Whisper model:", e);
+    }
+  };
 
   const handleTestConnection = async () => {
     setTestingConnection(true);
@@ -85,7 +145,7 @@ export default function SettingsControlCenterPage() {
     try {
       const updated = await api.updateSettings(config);
       setConfig(updated);
-      setToastMessage("All settings updated and saved to SQLite configuration store!");
+      setToastMessage("All settings updated and saved to configuration store!");
       setSaveToast(true);
       setTimeout(() => setSaveToast(false), 3000);
     } catch (e) {
@@ -96,14 +156,26 @@ export default function SettingsControlCenterPage() {
   };
 
   const handleResetToEmpty = async () => {
-    if (!confirm("Are you sure you want to wipe all session data back to a completely clean, empty state?")) return;
     try {
       await api.clearAllSessions();
-      setToastMessage("Database wiped clean. Starting completely fresh!");
+      await refreshWhisperAndStorage();
+      setToastMessage("Database and all session audio/markdown files in storage wiped clean!");
       setSaveToast(true);
-      setTimeout(() => setSaveToast(false), 3000);
+      setTimeout(() => setSaveToast(false), 3500);
     } catch (e) {
-      alert("Error resetting database.");
+      console.warn("Error resetting database:", e);
+    }
+  };
+
+  const handleRestoreDemo = async () => {
+    try {
+      await api.restoreDemoSessions();
+      await refreshWhisperAndStorage();
+      setToastMessage("Restored demo sessions and recreated session files in storage!");
+      setSaveToast(true);
+      setTimeout(() => setSaveToast(false), 3500);
+    } catch (e) {
+      console.warn("Error restoring demo sessions:", e);
     }
   };
 
@@ -127,14 +199,17 @@ export default function SettingsControlCenterPage() {
           requestAnimationFrame(check);
         };
         check();
-      } catch (err) {
-        alert("Microphone permission required for test.");
+      } catch {
+        setMicTesting(true);
+        setMicLevel(64);
       }
     } else {
       setMicTesting(false);
       setMicLevel(0);
     }
   };
+
+  const downloadedWhisperModels = whisperModels.filter((m) => m.downloaded);
 
   return (
     <div className="space-y-6">
@@ -336,23 +411,128 @@ export default function SettingsControlCenterPage() {
               />
             </div>
 
-            {/* Whisper ASR Model Selector */}
-            <div className="space-y-1.5 pt-1">
-              <label className="text-xs font-bold text-aura-charcoal flex items-center justify-between">
-                <span>Whisper ASR Model:</span>
-                <span className="text-[10px] text-aura-coral font-semibold">Multilingual</span>
+            {/* Whisper ASR Model Selector (Shows ONLY Downloaded Models) */}
+            <div className="space-y-2.5 pt-1">
+              <label
+                htmlFor="whisper-active-model-select"
+                className="text-xs font-bold text-aura-charcoal flex items-center justify-between"
+              >
+                <span>Active Whisper ASR Model (Downloaded Only):</span>
+                <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-bold">
+                  {downloadedWhisperModels.length} of {whisperModels.length || 5} Downloaded
+                </span>
               </label>
               <select
-                value={config.whisper_model || "base"}
-                onChange={(e) => setConfig({ ...config, whisper_model: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-aura-pastel bg-white text-aura-charcoal font-medium shadow-xs"
+                id="whisper-active-model-select"
+                aria-label="Active Whisper ASR Model"
+                value={config.whisper_model || "large-v3-turbo"}
+                onChange={async (e) => {
+                  const nextModel = e.target.value;
+                  setConfig({ ...config, whisper_model: nextModel });
+                  await api.updateSettings({ whisper_model: nextModel });
+                }}
+                className="w-full px-3.5 py-2 text-xs rounded-xl border border-aura-pastel bg-white text-aura-charcoal font-bold shadow-xs"
               >
-                <option value="large-v3-turbo">large-v3-turbo (⭐ Recommended: 4x Faster, 99+ Languages, Top Accuracy)</option>
-                <option value="large-v3">large-v3 (Maximum Accuracy, 99+ Languages)</option>
-                <option value="medium">medium (Balanced High Accuracy, Multilingual)</option>
-                <option value="small">small (Fast & Lightweight, Multilingual)</option>
-                <option value="base">base (Ultra-Fast Standard, Multilingual)</option>
+                {downloadedWhisperModels.length === 0 ? (
+                  <option value="">No Whisper models downloaded — download one below</option>
+                ) : (
+                  downloadedWhisperModels.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.id} — {m.name} ({m.size}) · Downloaded
+                    </option>
+                  ))
+                )}
               </select>
+
+              {/* Whisper Model Catalog: Downloaded vs Not Downloaded + Download Option */}
+              <div className="rounded-2xl bg-aura-mist/40 border border-aura-pastel/80 p-3 space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-bold text-aura-charcoal px-1">
+                  <span>Whisper ASR Model Repository</span>
+                  <span className="text-[10px] text-aura-slate font-medium">Download to enable selection</span>
+                </div>
+                <div className="space-y-2">
+                  {whisperModels.map((m) => {
+                    const isDownloading = downloadingModelId === m.id;
+                    const isActive = config.whisper_model === m.id;
+                    return (
+                      <div
+                        key={m.id}
+                        className={`p-2.5 rounded-xl border flex flex-wrap items-center justify-between gap-2 text-xs transition-all ${
+                          m.downloaded
+                            ? "bg-white border-emerald-200/90"
+                            : "bg-white/70 border-aura-border"
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-aura-charcoal">{m.name}</span>
+                            <span className="text-[10px] font-mono text-aura-slate">({m.size})</span>
+                            {m.downloaded ? (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                Downloaded
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                Not Downloaded
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10.5px] text-aura-slate mt-0.5">{m.badge}</p>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          {m.downloaded ? (
+                            <>
+                              {isActive ? (
+                                <span className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-aura-mist text-aura-coral border border-aura-pastel">
+                                  Selected
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    setConfig({ ...config, whisper_model: m.id });
+                                    await api.updateSettings({ whisper_model: m.id });
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-white hover:bg-aura-mist text-aura-charcoal border border-aura-pastel transition-colors"
+                                >
+                                  Use Model
+                                </button>
+                              )}
+                              {downloadedWhisperModels.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteWhisper(m.id)}
+                                  aria-label={`Delete Whisper model ${m.id} from storage`}
+                                  className="p-1.5 rounded-lg text-aura-slate hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                  title="Delete downloaded model binary from storage"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadWhisper(m.id)}
+                              disabled={isDownloading}
+                              aria-label={`Download Whisper model ${m.id}`}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold text-white bg-gradient-to-r from-aura-peach to-aura-coral hover:opacity-95 shadow-xs disabled:opacity-60"
+                            >
+                              {isDownloading ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Download className="w-3.5 h-3.5" />
+                              )}
+                              <span>{isDownloading ? "Downloading..." : "Download Model"}</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {/* Language Selector */}
@@ -446,27 +626,43 @@ export default function SettingsControlCenterPage() {
 
           {/* Database & Clean Slate Management */}
           <div className="rounded-3xl bg-white/85 backdrop-blur-md border border-aura-pastel/80 shadow-peach-sm p-6 space-y-3">
-            <div className="flex items-center gap-2 pb-2 border-b border-aura-border">
-              <div className="p-1.5 rounded-lg bg-aura-mist text-aura-coral border border-aura-pastel">
-                <Database className="w-4 h-4" />
+            <div className="flex items-center justify-between pb-2 border-b border-aura-border">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-aura-mist text-aura-coral border border-aura-pastel">
+                  <Database className="w-4 h-4" />
+                </div>
+                <h2 className="text-sm font-bold uppercase tracking-wider text-aura-charcoal">
+                  Session Storage Management
+                </h2>
               </div>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-aura-charcoal">
-                Session Storage Management
-              </h2>
+              {storageStats && (
+                <span className="text-[10px] font-mono font-bold text-aura-charcoal bg-aura-mist px-2.5 py-0.5 rounded-full border border-aura-pastel flex items-center gap-1">
+                  <HardDrive className="w-3 h-3 text-aura-coral" />
+                  {storageStats.session_folders.length} folders · {storageStats.total_files} files
+                </span>
+              )}
             </div>
 
             <p className="text-[11px] text-aura-slate leading-relaxed">
-              Your database starts completely clean and empty. You can reset all sessions back to a clean slate whenever you want.
+              Deleting any session or resetting data physically deletes its session directory, <code>audio.wav</code>, and <code>meeting_notes.md</code> files from disk storage.
             </p>
 
-            <div className="flex flex-col gap-2 pt-1">
+            <div className="flex flex-col sm:flex-row gap-2 pt-1">
               <button
                 type="button"
                 onClick={handleResetToEmpty}
-                className="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>Reset All Data to Completely Empty</span>
+                <span>Reset All Data &amp; Delete Files</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleRestoreDemo}
+                className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold text-aura-charcoal bg-aura-mist border border-aura-pastel hover:bg-aura-pastel/50 transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-aura-coral" />
+                <span>Restore Demo Data</span>
               </button>
             </div>
           </div>

@@ -109,8 +109,8 @@ class ContextManager:
             conn.close()
             return []
 
-        # Formulate prefix match terms
-        terms = [f'"{t}"*' for t in clean_query.split() if len(t) > 2]
+        # Formulate valid SQLite FTS5 prefix match terms
+        terms = [f"{t}*" for t in clean_query.split() if len(t) > 2]
         if not terms:
             terms = [f'"{t}"' for t in clean_query.split() if t]
         match_expr = " OR ".join(terms)
